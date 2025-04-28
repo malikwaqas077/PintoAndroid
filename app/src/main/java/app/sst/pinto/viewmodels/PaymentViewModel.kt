@@ -112,15 +112,14 @@ class PaymentViewModel : ViewModel() {
 
         sendMessage(message)
 
-        // Handle Pay by Bank scenario - show QR code first
-        if (method == "PAY_BY_BANK") {
-            _screenState.value = PaymentScreenState.QrCodeDisplay()
-        }
+        // The server will handle transitioning to QR code for Pay by Bank
+        // We don't need to manually set the state here anymore
     }
 
     fun cancelPayment() {
         val transactionId = currentTransactionId ?: return
 
+        // Send cancel message
         val message = SocketMessage(
             messageType = "USER_ACTION",
             screen = "CANCEL",
@@ -190,9 +189,14 @@ class PaymentViewModel : ViewModel() {
             "PAYMENT_METHOD" -> {
                 _screenState.value = PaymentScreenState.PaymentMethodSelect(
                     methods = message.data?.methods ?: listOf("DEBIT_CARD", "PAY_BY_BANK"),
-                    amount = currentAmount, // Use stored amount instead of 0
+                    amount = currentAmount, // Use stored amount
                     currency = message.data?.currency ?: "£",
                     allowCancel = message.data?.allowCancel ?: true
+                )
+            }
+            "QR_CODE" -> {
+                _screenState.value = PaymentScreenState.QrCodeDisplay(
+                    paymentUrl = message.data?.paymentUrl ?: ""
                 )
             }
             "PROCESSING" -> {

@@ -206,7 +206,7 @@ fun AmountSelectionScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.7f) // Use more of the height
+                .fillMaxHeight(0.8f) // Use more of the height
         ) {
             items(amounts) { amount ->
                 AmountButton(
@@ -226,20 +226,8 @@ fun AmountSelectionScreen(
                 }
             }
         }
-
-//        // Animated GIF at bottom
-//        GlideImage(
-//            model = R.raw.initiated,
-//            contentDescription = "Payment Initialization",
-//            modifier = Modifier
-//                .size(150.dp)
-//                .align(Alignment.CenterHorizontally)
-//                .padding(bottom = 16.dp)
-//        )
     }
-}
-
-@Composable
+}@Composable
 fun AmountButton(
     amount: Int?,
     currency: String,
@@ -250,7 +238,7 @@ fun AmountButton(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp) // Larger height
+            .height(120.dp) // Increased height
             .shadow(
                 elevation = animateDpAsState(
                     targetValue = if (isPressed) 2.dp else 8.dp,
@@ -273,11 +261,13 @@ fun AmountButton(
         Text(
             text = if (amount != null) "$currency$amount" else "Other",
             fontWeight = FontWeight.Bold,
-            fontSize = 24.sp, // Increased font size
+            fontSize = 28.sp, // Increased font size
             color = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
 }
+
+
 
 @Composable
 fun KeypadEntryScreen(
@@ -479,15 +469,6 @@ fun PaymentMethodScreen(
 
         Spacer(modifier = Modifier.weight(0.2f))
 
-        // Payment animation
-//        GlideImage(
-//            model = R.raw.initiated,
-//            contentDescription = "Payment Options",
-//            modifier = Modifier
-//                .size(120.dp)
-//                .padding(bottom = 16.dp)
-//        )
-
         // Cancel button
         Button(
             onClick = { onCancel() },
@@ -519,7 +500,7 @@ fun PaymentMethodButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp), // Increased height
+            .height(100.dp), // Increased height even more
         shape = RoundedCornerShape(12.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
@@ -530,7 +511,7 @@ fun PaymentMethodButton(
                 else -> method
             },
             fontWeight = FontWeight.Bold,
-            fontSize = 20.sp // Increased font size
+            fontSize = 24.sp // Increased font size
         )
     }
 }
@@ -549,12 +530,12 @@ fun QrCodeScreen(
     ) {
         AnimatedHeader(text = "Scan QR Code to Pay")
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Placeholder for QR code - in real app, generate dynamically
         Box(
             modifier = Modifier
-                .size(240.dp)
+                .size(280.dp)
                 .border(width = 2.dp, color = Color.Black, shape = RoundedCornerShape(12.dp))
                 .padding(16.dp),
             contentAlignment = Alignment.Center
@@ -567,7 +548,7 @@ fun QrCodeScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
             text = "Open your banking app and scan this QR code",
@@ -575,16 +556,7 @@ fun QrCodeScreen(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.weight(0.2f))
-
-        // Processing animation
-        GlideImage(
-            model = R.raw.pending,
-            contentDescription = "Waiting for Payment",
-            modifier = Modifier.size(120.dp)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.weight(1f))
 
         // Cancel button
         Button(

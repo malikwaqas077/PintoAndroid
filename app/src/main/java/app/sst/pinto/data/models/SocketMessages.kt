@@ -33,7 +33,10 @@ data class MessageData(
 
     // Limit information
     @Json(name = "limit") val limit: Int? = null,
-    @Json(name = "remaining") val remaining: Int? = null
+    @Json(name = "remaining") val remaining: Int? = null,
+
+    // QR code information
+    @Json(name = "paymentUrl") val paymentUrl: String? = null
 )
 
 // Screen states for the app
@@ -79,6 +82,7 @@ sealed class PaymentScreenState {
     object ThankYou : PaymentScreenState()
 
     data class DeviceError(val errorMessage: String) : PaymentScreenState()
-    // Add this inside the PaymentScreenState sealed class
+
+    // QR code display screen - updated with paymentUrl parameter
     data class QrCodeDisplay(val paymentUrl: String = "") : PaymentScreenState()
 }
