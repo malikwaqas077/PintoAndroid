@@ -54,7 +54,32 @@ class SocketManager private constructor() {
         webSocket = null
         _connectionState.value = ConnectionState.DISCONNECTED
     }
+    // Add these methods to the SocketManager class
 
+    /**
+     * Force reconnection to the server.
+     * Useful after screensaver or timeout periods.
+     */
+    fun ensureConnected() {
+        Log.d(TAG, "Ensuring socket connection is active")
+        if (_connectionState.value != ConnectionState.CONNECTED) {
+            Log.d(TAG, "Not connected, attempting reconnection to $serverUrl")
+            connect(serverUrl)
+        } else {
+            Log.d(TAG, "Already connected to $serverUrl")
+
+            // Send a small ping message to verify connection is still alive
+            val pingSuccess = webSocket?.send("{\"ping\":true}")
+            Log.d(TAG, "Sent ping message, result: $pingSuccess")
+        }
+    }
+
+    /**
+     * Checks connection state and returns if connected
+     */
+    fun isConnected(): Boolean {
+        return _connectionState.value == ConnectionState.CONNECTED
+    }
     fun sendMessage(message: String): Boolean {
         return if (_connectionState.value == ConnectionState.CONNECTED) {
             webSocket?.send(message) ?: false
