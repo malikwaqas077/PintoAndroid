@@ -1,6 +1,8 @@
 package app.sst.pinto.viewmodels
 
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.sst.pinto.data.models.MessageData
@@ -16,14 +18,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
+import app.sst.pinto.config.ConfigManager
 
-class PaymentViewModel : ViewModel() {
+class PaymentViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "PaymentViewModel"
     private val socketManager = SocketManager.getInstance()
     private val timeoutManager = TimeoutManager.getInstance()
+    private val configManager = ConfigManager.getInstance(getApplication())
 
     // Store the server URL as a class property
-    private var serverUrl: String = "ws://192.168.2.115:8080"
+//    private var serverUrl: String = "ws://192.168.2.112:5001"
+    private var serverUrl: String = configManager.getServerUrl()
 
     private val _screenState = MutableStateFlow<PaymentScreenState>(PaymentScreenState.Loading)
     val screenState: StateFlow<PaymentScreenState> = _screenState
@@ -95,17 +100,25 @@ class PaymentViewModel : ViewModel() {
         }
 
         // Monitor socket connection state
+        // In the PaymentViewModel.kt file
+// Update the code to directly switch to ConnectionError
+
+// For example, in the socketManager connection state collector:
         viewModelScope.launch {
             socketManager.connectionState.collect { state ->
                 Log.d(TAG, "Socket connection state changed: $state")
                 when (state) {
                     SocketManager.ConnectionState.DISCONNECTED -> {
                         Log.d(TAG, "Socket disconnected, updating screen state")
+                        // Immediately set to ConnectionError, don't go through Loading
                         _screenState.value = PaymentScreenState.ConnectionError
                     }
                     SocketManager.ConnectionState.CONNECTING -> {
-                        Log.d(TAG, "Socket connecting, updating screen state")
-                        _screenState.value = PaymentScreenState.Loading
+                        // Only set Loading if we're not already in ConnectionError state
+                        if (_screenState.value !is PaymentScreenState.ConnectionError) {
+                            Log.d(TAG, "Socket connecting, updating screen state")
+                            _screenState.value = PaymentScreenState.Loading
+                        }
                     }
                     else -> {} // No direct state change on connected
                 }
@@ -426,7 +439,13 @@ class PaymentViewModel : ViewModel() {
             socketManager.ensureConnected()
         }
     }
-
+    // Add this function to PaymentViewModel
+    fun retryConnection() {
+        Log.d(TAG, "Retrying connection to $serverUrl")
+        _screenState.value = PaymentScreenState.Loading
+        socketManager.disconnect()
+        connectToBackend(serverUrl)
+    }
     /**
      * Send a message to the server with better error handling
      */

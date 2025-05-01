@@ -23,10 +23,13 @@ import app.sst.pinto.ui.screens.PaymentScreen
 import app.sst.pinto.ui.theme.PintoTheme
 import app.sst.pinto.utils.TimeoutManager
 import app.sst.pinto.viewmodels.PaymentViewModel
+import app.sst.pinto.config.ConfigManager
+
 
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
     private lateinit var timeoutManager: TimeoutManager
+    lateinit var configManager: ConfigManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,9 +38,11 @@ class MainActivity : ComponentActivity() {
 
         // Initialize timeout manager
         timeoutManager = TimeoutManager.getInstance()
+        configManager = ConfigManager.getInstance(applicationContext)
 
         // You can set this in your app configuration or make it user-configurable
-        val serverUrl = "ws://192.168.2.115:8080"
+//        val serverUrl = "ws://192.168.2.115:8080"
+        val serverUrl = configManager.getServerUrl()
 
         // Set video resource for screensaver - assumes you have a video file in res/raw/screensaver.mp4
         val screensaverVideoResId = R.raw.screensaver

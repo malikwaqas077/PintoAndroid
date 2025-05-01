@@ -23,7 +23,7 @@ class SocketManager private constructor() {
         .build()
 
     private var webSocket: WebSocket? = null
-    private var serverUrl: String = "192.168.2.115:8080"
+    private var serverUrl: String = "ws://192.168.2.112:5001"
 
     // Connection state
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)

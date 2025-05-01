@@ -153,6 +153,7 @@ fun LoadingScreen() {
     }
 }
 
+
 @Composable
 fun ConnectionErrorScreen() {
     Column(
@@ -162,7 +163,22 @@ fun ConnectionErrorScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AnimatedHeader(text = "Connection Error")
+        // Error icon
+        Icon(
+            painter = painterResource(id = R.drawable.ic_warning),
+            contentDescription = "Connection Error",
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Connection Error",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -170,13 +186,6 @@ fun ConnectionErrorScreen() {
             text = "Unable to connect to the payment server. Please check your connection.",
             textAlign = TextAlign.Center,
             fontSize = 18.sp
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        CircularProgressIndicator(
-            modifier = Modifier.size(60.dp),
-            color = MaterialTheme.colorScheme.error
         )
     }
 }
