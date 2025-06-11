@@ -520,6 +520,28 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     /**
      * Process screen state changes to track when we're on the amount selection screen
      */
+    fun respondToReceiptQuestion(wantsReceipt: Boolean) {
+        Log.d(TAG, "Receipt response: $wantsReceipt")
+        recordUserInteraction()
+
+        val transactionId = currentTransactionId
+        if (transactionId == null) {
+            Log.e(TAG, "Cannot respond to receipt question: No active transaction ID")
+            return
+        }
+
+        val message = SocketMessage(
+            messageType = "USER_ACTION",
+            screen = "RECEIPT_RESPONSE",
+            data = MessageData(
+                selectionMethod = if (wantsReceipt) "YES" else "NO"
+            ),
+            transactionId = transactionId,
+            timestamp = System.currentTimeMillis()
+        )
+
+        sendMessage(message)
+    }
     private fun handleScreenChange(message: SocketMessage) {
         Log.d(TAG, "Handling screen change to: ${message.screen}")
         when (message.screen) {
@@ -538,6 +560,22 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 } else {
                     Log.e(TAG, "Invalid data for AMOUNT_SELECT: $data")
                     _isOnAmountScreen.value = false
+                }
+            }
+            "RECEIPT_QUESTION" -> {
+                Log.d(TAG, "Changing to RECEIPT_QUESTION screen")
+                _screenState.value = PaymentScreenState.ReceiptQuestion(showGif = true)
+                _isOnAmountScreen.value = false
+            }
+            "TIMEOUT" -> {
+                Log.d(TAG, "Changing to TIMEOUT screen")
+                _screenState.value = PaymentScreenState.Timeout
+                _isOnAmountScreen.value = false
+
+                // Auto-navigate back to amount selection after a few seconds
+                viewModelScope.launch {
+                    delay(5000) // Wait 5 seconds
+                    requestInitialScreen() // Return to amount selection
                 }
             }
             "KEYPAD" -> {
@@ -592,11 +630,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 _isOnAmountScreen.value = false
             }
             "LIMIT_ERROR" -> {
-                Log.d(TAG, "Changing to LIMIT_ERROR screen with limit: ${message.data?.limit}")
+                val errorMessage = message.data?.errorMessage ?: "Limit exceeded"
+                Log.d(TAG, "Changing to LIMIT_ERROR screen with message: $errorMessage")
                 _screenState.value = PaymentScreenState.LimitError(
-                    limit = message.data?.limit ?: 300,
-                    remaining = message.data?.remaining ?: 0,
-                    currency = message.data?.currency ?: "£"
+                    errorMessage = errorMessage
                 )
                 _isOnAmountScreen.value = false
             }

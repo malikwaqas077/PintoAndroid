@@ -99,13 +99,14 @@ class ConfigManager private constructor(context: Context) {
         private const val PREF_NAME = "app_config"
 
         // Keys
-        private const val KEY_SERVER_URL = "ws://192.168.2.115:8080"
+        private const val KEY_SERVER_URL = "ws://192.168.2.112:5001"
         private const val KEY_RETRY_INTERVAL = "retry_interval_seconds"
         private const val KEY_MAX_RETRY_ATTEMPTS = "max_retry_attempts"
         private const val KEY_INACTIVITY_TIMEOUT = "inactivity_timeout_seconds"
 
         // Default values
-        const val DEFAULT_SERVER_URL = "ws://192.168.2.115:8080"
+//        const val DEFAULT_SERVER_URL = "ws://192.168.2.115:8080"
+        const val DEFAULT_SERVER_URL = "ws://192.168.2.112:5001"
         const val DEFAULT_RETRY_INTERVAL_SECONDS = 5
         const val DEFAULT_MAX_RETRY_ATTEMPTS = 0 // 0 means infinite
         const val DEFAULT_INACTIVITY_TIMEOUT_SECONDS = 120

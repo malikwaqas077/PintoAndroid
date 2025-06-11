@@ -44,6 +44,9 @@ sealed class PaymentScreenState {
     object Loading : PaymentScreenState()
     object ConnectionError : PaymentScreenState()
 
+    data class ReceiptQuestion(
+        val showGif: Boolean = true
+    ) : PaymentScreenState()
     data class AmountSelect(
         val amounts: List<Int>,
         val currency: String,
@@ -64,15 +67,15 @@ sealed class PaymentScreenState {
     ) : PaymentScreenState()
 
     object Processing : PaymentScreenState()
+    object Timeout : PaymentScreenState()
+
 
     data class TransactionSuccess(val showReceipt: Boolean) : PaymentScreenState()
 
     data class TransactionFailed(val errorMessage: String?) : PaymentScreenState()
 
     data class LimitError(
-        val limit: Int,
-        val remaining: Int,
-        val currency: String
+        val errorMessage: String
     ) : PaymentScreenState()
 
     object PrintingTicket : PaymentScreenState()

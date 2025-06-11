@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +39,7 @@ fun PaymentScreen(
     screenState: PaymentScreenState,
     onAmountSelected: (Int) -> Unit,
     onPaymentMethodSelected: (String) -> Unit,
+    onReceiptResponse: (Boolean) -> Unit, // Add this new parameter
     onCancelPayment: () -> Unit = {}
 ) {
     // Track previous state for animations
@@ -68,6 +70,17 @@ fun PaymentScreen(
     ) { targetState ->
         // Handle different screen states
         when (targetState) {
+            // Add this case to the when block in PaymentScreen.kt
+            is PaymentScreenState.ReceiptQuestion -> ReceiptQuestionScreen(
+                onResponseSelected = { wantsReceipt ->
+                    if (wantsReceipt) {
+                        onReceiptResponse(true)
+                    } else {
+                        onReceiptResponse(false)
+                    }
+                }
+            )
+            is PaymentScreenState.Timeout -> TimeoutScreen()
             is PaymentScreenState.Loading -> LoadingScreen()
             is PaymentScreenState.ConnectionError -> ConnectionErrorScreen()
             is PaymentScreenState.AmountSelect -> AmountSelectionScreen(
@@ -96,9 +109,7 @@ fun PaymentScreen(
                 errorMessage = targetState.errorMessage
             )
             is PaymentScreenState.LimitError -> LimitErrorScreen(
-                limit = targetState.limit,
-                remaining = targetState.remaining,
-                currency = targetState.currency
+                errorMessage = targetState.errorMessage
             )
             is PaymentScreenState.PrintingTicket -> PrintingTicketScreen()
             is PaymentScreenState.CollectTicket -> CollectTicketScreen()
@@ -109,7 +120,109 @@ fun PaymentScreen(
         }
     }
 }
+@Composable
+fun TimeoutScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black), // Optional black background
+        contentAlignment = Alignment.Center
+    ) {
+        // Display the timeout image at full screen size
+        Image(
+            painter = painterResource(id = R.drawable.timeout),
+            contentDescription = "Session Timeout",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds // This will make the image fill the available space
+        )
+    }
+}
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun ReceiptQuestionScreen(
+    onResponseSelected: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Do you require",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
+        )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "a card receipt?",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Card image or animated GIF
+        GlideImage(
+            model = R.raw.receipt,
+            contentDescription = "Card Receipt",
+            modifier = Modifier.size(120.dp)
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // Yes/No buttons
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // YES button
+            Button(
+                onClick = { onResponseSelected(true) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1A8CFF) // Blue color as shown in the image
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "YES",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+
+            // NO button
+            Button(
+                onClick = { onResponseSelected(false) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF5C44) // Orange-red color as shown in the image
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "NO",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
 @Composable
 fun AnimatedHeader(text: String) {
     var animationPlayed by remember { mutableStateOf(false) }
@@ -757,7 +870,7 @@ fun TransactionFailedScreen(errorMessage: String?) {
 }
 
 @Composable
-fun LimitErrorScreen(limit: Int, remaining: Int, currency: String) {
+fun LimitErrorScreen(errorMessage: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -776,7 +889,7 @@ fun LimitErrorScreen(limit: Int, remaining: Int, currency: String) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Amount Limit Exceeded",
+            text = "Limit Error",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -799,29 +912,11 @@ fun LimitErrorScreen(limit: Int, remaining: Int, currency: String) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Daily limit: $currency$limit",
+                    text = errorMessage,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Remaining: $currency$remaining",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Please start a new transaction with an amount of $currency$remaining or less.",
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color.Black
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -848,7 +943,6 @@ fun LimitErrorScreen(limit: Int, remaining: Int, currency: String) {
         )
     }
 }
-
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun PrintingTicketScreen() {
@@ -862,7 +956,7 @@ fun PrintingTicketScreen() {
         AnimatedHeader(text = "Printing")
 
         Text(
-            text = "Ticket & Receipt",
+            text = "Ticket",
             fontSize = 22.sp,
             textAlign = TextAlign.Center
         )

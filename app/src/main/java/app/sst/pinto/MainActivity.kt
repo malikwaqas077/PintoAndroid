@@ -119,6 +119,7 @@ fun MainScreen(serverUrl: String, screensaverVideoResId: Int) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Main payment screen that handles all states
+        // Add to MainScreen
         PaymentScreen(
             screenState = screenState,
             onAmountSelected = { amount ->
@@ -130,6 +131,11 @@ fun MainScreen(serverUrl: String, screensaverVideoResId: Int) {
                 Log.d(TAG, "Payment method selected: $method")
                 viewModel.recordUserInteraction()
                 viewModel.selectPaymentMethod(method)
+            },
+            onReceiptResponse = { wantsReceipt ->
+                Log.d(TAG, "Receipt response: $wantsReceipt")
+                viewModel.recordUserInteraction()
+                viewModel.respondToReceiptQuestion(wantsReceipt)
             },
             onCancelPayment = {
                 Log.d(TAG, "Payment canceled by user")
