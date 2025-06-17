@@ -52,7 +52,7 @@ class TimeoutManager private constructor() {
     var onTimeout: (() -> Unit)? = null
 
     init {
-        Log.d(TAG, "TimeoutManager initialized, inactivity threshold: ${INACTIVITY_THRESHOLD/1000} seconds, countdown: ${COUNTDOWN_DURATION/1000} seconds")
+//        Log.d(TAG, "TimeoutManager initialized, inactivity threshold: ${INACTIVITY_THRESHOLD/1000} seconds, countdown: ${COUNTDOWN_DURATION/1000} seconds")
         startInactivityTimer()
     }
 
@@ -205,12 +205,12 @@ class TimeoutManager private constructor() {
                 val secondsLeft = millisUntilFinished / 1000
                 // Log every 5 seconds for debugging
                 if (secondsLeft % 5 == 0L) {
-                    Log.d(TAG, "Inactivity timer: $secondsLeft seconds remaining")
+//                    Log.d(TAG, "Inactivity timer: $secondsLeft seconds remaining")
                 }
             }
 
             override fun onFinish() {
-                Log.d(TAG, "Inactivity timer finished, showing timeout warning")
+//                Log.d(TAG, "Inactivity timer finished, showing timeout warning")
                 showTimeoutWarning()
             }
         }.start()

@@ -8,14 +8,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sst.pinto.ui.components.Screensaver
 import app.sst.pinto.ui.components.TimeoutWarning
@@ -24,27 +30,25 @@ import app.sst.pinto.ui.theme.PintoTheme
 import app.sst.pinto.utils.TimeoutManager
 import app.sst.pinto.viewmodels.PaymentViewModel
 import app.sst.pinto.config.ConfigManager
+import app.sst.pinto.ui.components.PressAndHoldDetector
+import app.sst.pinto.ui.screens.ServerConfigScreen
 
 
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
     private lateinit var timeoutManager: TimeoutManager
-    lateinit var configManager: ConfigManager
+    private lateinit var configManager: ConfigManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate called")
         enableEdgeToEdge()
 
-        // Initialize timeout manager
+        // Initialize managers
         timeoutManager = TimeoutManager.getInstance()
         configManager = ConfigManager.getInstance(applicationContext)
 
-        // You can set this in your app configuration or make it user-configurable
-//        val serverUrl = "ws://192.168.2.115:8080"
-        val serverUrl = configManager.getServerUrl()
-
-        // Set video resource for screensaver - assumes you have a video file in res/raw/screensaver.mp4
+        // Set video resource for screensaver
         val screensaverVideoResId = R.raw.screensaver
 
         setContent {
@@ -54,7 +58,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(serverUrl, screensaverVideoResId)
+                    MainScreen(configManager, screensaverVideoResId)
                 }
             }
         }
@@ -90,84 +94,105 @@ class MainActivity : ComponentActivity() {
 // Update in MainActivity.kt
 
 @Composable
-fun MainScreen(serverUrl: String, screensaverVideoResId: Int) {
+fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
     val TAG = "MainScreen"
-    Log.d(TAG, "MainScreen composition started")
-
     val viewModel: PaymentViewModel = viewModel()
     val screenState by viewModel.screenState.collectAsState()
     val isScreensaverVisible by viewModel.isScreensaverVisible.collectAsState()
     val isOnAmountScreen by viewModel.isOnAmountScreen.collectAsState()
     val timeoutManager = TimeoutManager.getInstance()
 
-    // Connect to backend when the app starts
-    viewModel.connectToBackend(serverUrl)
+    // Server configuration state
+    var showServerConfig by remember { mutableStateOf(configManager.isFirstLaunch()) }
+    var serverUrl by remember { mutableStateOf(configManager.getServerUrl()) }
 
-    // Setup custom timeout behavior based on current screen
-    LaunchedEffect(isOnAmountScreen) {
-        if (isOnAmountScreen) {
-            // On amount screen, we want to disable the countdown warning
-            // but still track inactivity for screensaver
-            timeoutManager.setSkipWarning(true)
-            Log.d(TAG, "Amount screen detected, skipping timeout warning")
-        } else {
-            // On other screens, show the normal countdown warning
-            timeoutManager.setSkipWarning(false)
-            Log.d(TAG, "Non-amount screen detected, enabling timeout warning")
+    // Connect to backend only if we have a server URL
+    LaunchedEffect(serverUrl) {
+        if (serverUrl.isNotEmpty() && !showServerConfig) {
+            viewModel.connectToBackend(serverUrl)
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Main payment screen that handles all states
-        // Add to MainScreen
-        PaymentScreen(
-            screenState = screenState,
-            onAmountSelected = { amount ->
-                Log.d(TAG, "Amount selected: $amount")
-                viewModel.recordUserInteraction()
-                viewModel.selectAmount(amount)
-            },
-            onPaymentMethodSelected = { method ->
-                Log.d(TAG, "Payment method selected: $method")
-                viewModel.recordUserInteraction()
-                viewModel.selectPaymentMethod(method)
-            },
-            onReceiptResponse = { wantsReceipt ->
-                Log.d(TAG, "Receipt response: $wantsReceipt")
-                viewModel.recordUserInteraction()
-                viewModel.respondToReceiptQuestion(wantsReceipt)
-            },
-            onCancelPayment = {
-                Log.d(TAG, "Payment canceled by user")
-                viewModel.recordUserInteraction()
-                viewModel.cancelPayment()
-            }
-        )
+        if (showServerConfig) {
+            // Show server configuration screen
+            ServerConfigScreen(
+                currentIp = configManager.getServerIp(),
+                currentPort = configManager.getServerPort(),
+                isFirstTime = configManager.isFirstLaunch(),
+                onSave = { ip, port ->
+                    val success = configManager.saveServerConfig(ip, port)
+                    if (success) {
+                        serverUrl = configManager.getServerUrl()
+                        showServerConfig = false
+                    }
+                },
+                onCancel = if (!configManager.isFirstLaunch()) {
+                    { showServerConfig = false }
+                } else null,
+                onTest = { ip, port ->
+                    // Implement connection test if needed
+                    val testUrl = "ws://$ip:$port"
+                    // You could add a simple connection test here
+                }
+            )
+        } else {
+            // Main app content
+            PaymentScreen(
+                screenState = screenState,
+                onAmountSelected = { amount ->
+                    viewModel.recordUserInteraction()
+                    viewModel.selectAmount(amount)
+                },
+                onPaymentMethodSelected = { method ->
+                    viewModel.recordUserInteraction()
+                    viewModel.selectPaymentMethod(method)
+                },
+                onReceiptResponse = { wantsReceipt ->
+                    viewModel.recordUserInteraction()
+                    viewModel.respondToReceiptQuestion(wantsReceipt)
+                },
+                onCancelPayment = {
+                    viewModel.recordUserInteraction()
+                    viewModel.cancelPayment()
+                }
+            )
 
-        // Only show timeout warning if we're not on the amount selection screen
-        // The actual visibility control is now handled by TimeoutManager based on skipWarning flag
-        TimeoutWarning(
-            timeoutManager = timeoutManager,
-            onContinue = {
-                Log.d(TAG, "User chose to continue session")
-                viewModel.recordUserInteraction()
-            },
-            onTimeout = {
-                Log.d(TAG, "User chose to end session immediately")
-                viewModel.cancelPayment(isTimeout = true)
-                // Show screensaver immediately
-                viewModel.forceShowScreensaver()
-            }
-        )
+            // Timeout warning (only when not on amount screen)
+            TimeoutWarning(
+                timeoutManager = timeoutManager,
+                onContinue = {
+                    viewModel.recordUserInteraction()
+                },
+                onTimeout = {
+                    viewModel.cancelPayment(isTimeout = true)
+                    viewModel.forceShowScreensaver()
+                }
+            )
 
-        // Screensaver - shows when timeout has occurred
-        Screensaver(
-            isVisible = isScreensaverVisible,
-            videoResId = screensaverVideoResId,
-            onTap = {
-                Log.d(TAG, "Screensaver tapped")
-                viewModel.dismissScreensaver()
+            // Screensaver
+            Screensaver(
+                isVisible = isScreensaverVisible,
+                videoResId = screensaverVideoResId,
+                onTap = {
+                    viewModel.dismissScreensaver()
+                }
+            )
+
+            // Press and hold detector (bottom-right corner)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                PressAndHoldDetector(
+                    holdDurationMs = 5000L,
+                    onHoldComplete = {
+                        showServerConfig = true
+                    }
+                )
             }
-        )
+        }
     }
 }

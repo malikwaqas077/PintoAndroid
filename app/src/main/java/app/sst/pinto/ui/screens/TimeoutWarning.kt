@@ -54,7 +54,7 @@ fun TimeoutWarning(
 
     // Log significant progress updates
     LaunchedEffect(secondsRemaining) {
-        Log.d(TAG, "TimeoutWarning seconds remaining: $secondsRemaining")
+//        Log.d(TAG, "TimeoutWarning seconds remaining: $secondsRemaining")
     }
 
     AnimatedVisibility(
@@ -62,7 +62,7 @@ fun TimeoutWarning(
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        Log.d(TAG, "Rendering timeout warning dialog with progress: $progress")
+//        Log.d(TAG, "Rendering timeout warning dialog with progress: $progress")
 
         // Semi-transparent overlay
         Box(
