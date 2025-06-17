@@ -3,6 +3,8 @@ package app.sst.pinto
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -22,6 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sst.pinto.ui.components.Screensaver
 import app.sst.pinto.ui.components.TimeoutWarning
@@ -33,7 +38,6 @@ import app.sst.pinto.config.ConfigManager
 import app.sst.pinto.ui.components.PressAndHoldDetector
 import app.sst.pinto.ui.screens.ServerConfigScreen
 
-
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
     private lateinit var timeoutManager: TimeoutManager
@@ -42,6 +46,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate called")
+
+        // Make the app fullscreen and hide system UI
+        setupFullscreen()
+
         enableEdgeToEdge()
 
         // Initialize managers
@@ -64,6 +72,40 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun setupFullscreen() {
+        // Hide the status bar and navigation bar
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.apply {
+            // Hide both status bar and navigation bar
+            hide(WindowInsetsCompat.Type.systemBars())
+            // Set behavior for when user swipes from edges
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
+        // Keep screen on (useful for kiosk apps)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Additional flags for immersive mode
+        window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_FULLSCREEN
+                )
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            // Re-apply fullscreen when window regains focus
+            setupFullscreen()
+        }
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         // Record user interaction for any touch event
         if (ev?.action == MotionEvent.ACTION_DOWN) {
@@ -83,6 +125,8 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "onResume called")
         // Reset timeout timer when app comes back to foreground
         timeoutManager.recordUserInteraction()
+        // Re-apply fullscreen mode
+        setupFullscreen()
     }
 
     override fun onDestroy() {
@@ -90,8 +134,6 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "onDestroy called")
     }
 }
-
-// Update in MainActivity.kt
 
 @Composable
 fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
