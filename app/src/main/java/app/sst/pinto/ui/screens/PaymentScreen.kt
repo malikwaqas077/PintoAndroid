@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +33,7 @@ import app.sst.pinto.data.models.PaymentScreenState
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
@@ -715,7 +717,270 @@ fun AmountButton(
         )
     }
 }
+@Composable
+fun PinAuthScreen(
+    onPinCorrect: () -> Unit,
+    onCancel: () -> Unit
+) {
+    var enteredPin by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+    val correctPin = "01482"
 
+    fun addDigit(digit: String) {
+        if (enteredPin.length < 5) {
+            enteredPin += digit
+            showError = false
+
+            // Auto-check when 5 digits are entered
+            if (enteredPin.length == 5) {
+                if (enteredPin == correctPin) {
+                    onPinCorrect()
+                } else {
+                    showError = true
+                    // Clear PIN after short delay
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                        kotlinx.coroutines.delay(1000)
+                        enteredPin = ""
+                        showError = false
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearPin() {
+        enteredPin = ""
+        showError = false
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Header
+        Text(
+            text = "Admin Access",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Enter PIN to access settings",
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // PIN Display
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                repeat(5) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                color = if (showError)
+                                    MaterialTheme.colorScheme.errorContainer
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                shape = CircleShape
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = if (showError)
+                                    MaterialTheme.colorScheme.error
+                                else if (index < enteredPin.length)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outline,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (index < enteredPin.length) {
+                            Text(
+                                text = "●",
+                                fontSize = 24.sp,
+                                color = if (showError)
+                                    MaterialTheme.colorScheme.error
+                                else
+                                    MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showError) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Incorrect PIN",
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // PIN Keypad
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Row 1: 1, 2, 3
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 1..3) {
+                        PinKeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = { addDigit(number.toString()) }
+                        )
+                    }
+                }
+
+                // Row 2: 4, 5, 6
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 4..6) {
+                        PinKeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = { addDigit(number.toString()) }
+                        )
+                    }
+                }
+
+                // Row 3: 7, 8, 9
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 7..9) {
+                        PinKeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = { addDigit(number.toString()) }
+                        )
+                    }
+                }
+
+                // Row 4: Clear, 0, Cancel
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Clear button
+                    PinKeypadButton(
+                        text = "Clear",
+                        backgroundColor = MaterialTheme.colorScheme.errorContainer,
+                        textColor = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f),
+                        onClick = { clearPin() }
+                    )
+
+                    // 0 button
+                    PinKeypadButton(
+                        text = "0",
+                        modifier = Modifier.weight(1f),
+                        onClick = { addDigit("0") }
+                    )
+
+                    // Cancel button
+                    PinKeypadButton(
+                        text = "Cancel",
+                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                        textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onCancel() }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PinKeypadButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    textColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    onClick: () -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .shadow(
+                elevation = animateDpAsState(
+                    targetValue = if (isPressed) 2.dp else 6.dp,
+                    animationSpec = tween(150)
+                ).value,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .background(
+                color = backgroundColor,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clip(RoundedCornerShape(12.dp))
+            .clickable {
+                isPressed = true
+                onClick()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            fontSize = if (text.length > 1) 14.sp else 20.sp,
+            color = textColor
+        )
+    }
+
+    // Reset the pressed state
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            delay(150)
+            isPressed = false
+        }
+    }
+}
 @Composable
 fun KeypadEntryScreen(
     currency: String,
@@ -723,149 +988,198 @@ fun KeypadEntryScreen(
 ) {
     val enteredAmount = remember { mutableStateOf("0") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center, // Center alignment
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        AnimatedHeader(text = "Enter Amount")
-
-        // Amount display
-        Box(
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Cancel button in top-left corner
+        IconButton(
+            onClick = {
+                // Pass -2 to go back to amount selection screen
+                onAmountEntered(-2)
+            },
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(16.dp)
-                .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(12.dp)
+                .size(48.dp)
+                .align(Alignment.TopEnd)
+                .background(
+                    color = Color.Red.copy(alpha = 0.1f),
+                    shape = CircleShape
                 )
-                .padding(16.dp),
-            contentAlignment = Alignment.CenterEnd
         ) {
             Text(
-                text = "$currency${enteredAmount.value}",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold
+                text = "✕",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Fixed Grid layout instead of LazyVerticalGrid to avoid scrolling
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Row 1: 1, 2, 3
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            AnimatedHeader(text = "Enter Amount")
+
+            // Amount display
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(16.dp),
+                contentAlignment = Alignment.CenterEnd
             ) {
-                for (number in 1..3) {
+                Text(
+                    text = "$currency${enteredAmount.value}",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Fixed Grid layout instead of LazyVerticalGrid to avoid scrolling
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Row 1: 1, 2, 3
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 1..3) {
+                        KeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                enteredAmount.value = if (enteredAmount.value == "0") {
+                                    number.toString()
+                                } else {
+                                    enteredAmount.value + number.toString()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Row 2: 4, 5, 6
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 4..6) {
+                        KeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                enteredAmount.value = if (enteredAmount.value == "0") {
+                                    number.toString()
+                                } else {
+                                    enteredAmount.value + number.toString()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Row 3: 7, 8, 9
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 7..9) {
+                        KeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                enteredAmount.value = if (enteredAmount.value == "0") {
+                                    number.toString()
+                                } else {
+                                    enteredAmount.value + number.toString()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Row 4: Clear, 0, OK
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Clear button
                     KeypadButton(
-                        text = number.toString(),
+                        text = "X",
+                        backgroundColor = Color.Red.copy(alpha = 0.7f),
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            enteredAmount.value = if (enteredAmount.value == "0") {
-                                number.toString()
-                            } else {
-                                enteredAmount.value + number.toString()
+                            enteredAmount.value = "0"
+                        }
+                    )
+
+                    // 0 button
+                    KeypadButton(
+                        text = "0",
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            if (enteredAmount.value != "0") {
+                                enteredAmount.value += "0"
+                            }
+                        }
+                    )
+
+                    // OK button
+                    KeypadButton(
+                        text = "OK",
+                        backgroundColor = Color.Green.copy(alpha = 0.7f),
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            enteredAmount.value.toIntOrNull()?.let { amount ->
+                                if (amount > 0) {
+                                    onAmountEntered(amount)
+                                }
                             }
                         }
                     )
                 }
-            }
 
-            // Row 2: 4, 5, 6
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                for (number in 4..6) {
-                    KeypadButton(
-                        text = number.toString(),
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            enteredAmount.value = if (enteredAmount.value == "0") {
-                                number.toString()
-                            } else {
-                                enteredAmount.value + number.toString()
-                            }
-                        }
+                // Add a spacer before the Cancel button
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Add a Cancel button at the bottom of the keypad
+                Button(
+                    onClick = {
+                        // Pass -2 to go back to amount selection screen
+                        onAmountEntered(-2)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Red.copy(alpha = 0.7f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                ) {
+                    Text(
+                        text = "CANCEL",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
                     )
                 }
-            }
-
-            // Row 3: 7, 8, 9
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                for (number in 7..9) {
-                    KeypadButton(
-                        text = number.toString(),
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            enteredAmount.value = if (enteredAmount.value == "0") {
-                                number.toString()
-                            } else {
-                                enteredAmount.value + number.toString()
-                            }
-                        }
-                    )
-                }
-            }
-
-            // Row 4: Clear, 0, OK
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Clear button
-                KeypadButton(
-                    text = "X",
-                    backgroundColor = Color.Red.copy(alpha = 0.7f),
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        enteredAmount.value = "0"
-                    }
-                )
-
-                // 0 button
-                KeypadButton(
-                    text = "0",
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (enteredAmount.value != "0") {
-                            enteredAmount.value += "0"
-                        }
-                    }
-                )
-
-                // OK button
-                KeypadButton(
-                    text = "OK",
-                    backgroundColor = Color.Green.copy(alpha = 0.7f),
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        enteredAmount.value.toIntOrNull()?.let { amount ->
-                            if (amount > 0) {
-                                onAmountEntered(amount)
-                            }
-                        }
-                    }
-                )
             }
         }
     }
 }
-
 @Composable
 fun KeypadButton(
     text: String,

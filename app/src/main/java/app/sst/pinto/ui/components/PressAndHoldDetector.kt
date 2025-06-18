@@ -41,7 +41,7 @@ fun PressAndHoldDetector(
     Box(
         modifier = modifier
             .size(60.dp) // Slightly larger for easier pressing
-            .alpha(if (isPressed) 0.8f else 0.3f) // More visible when pressed
+            .alpha(0f) // More visible when pressed
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
