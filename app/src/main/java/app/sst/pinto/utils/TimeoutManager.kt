@@ -182,7 +182,7 @@ class TimeoutManager private constructor() {
                 val exactSeconds = (millisUntilFinished / 1000).toInt()
                 _secondsRemaining.value = exactSeconds
 
-                Log.d(TAG, "Countdown: $exactSeconds seconds remaining, progress: $progress")
+//                Log.d(TAG, "Countdown: $exactSeconds seconds remaining, progress: $progress")
             }
 
             override fun onFinish() {

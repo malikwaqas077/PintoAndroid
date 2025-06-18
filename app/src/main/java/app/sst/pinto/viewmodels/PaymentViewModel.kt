@@ -185,7 +185,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         Log.d(TAG, "Amount selected: $amount")
         recordUserInteraction()
 
-        // Special code -2 is used to return to amount selection from limit error
+        // Special code -2 is used to return to amount selection from limit error or to cancel keypad entry
         if (amount == -2) {
             val transactionId = UUID.randomUUID().toString()
             currentTransactionId = transactionId

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -398,144 +399,194 @@ fun KeypadEntryScreen(
 ) {
     val enteredAmount = remember { mutableStateOf("0") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center, // Center alignment
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        AnimatedHeader(text = "Enter Amount")
-
-        // Amount display
-        Box(
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Cancel button in top-left corner
+        IconButton(
+            onClick = {
+                // Pass -2 to go back to amount selection screen
+                onAmountEntered(-2)
+            },
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(16.dp)
-                .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(12.dp)
+                .size(48.dp)
+                .align(Alignment.TopStart)
+                .background(
+                    color = Color.Red.copy(alpha = 0.1f),
+                    shape = CircleShape
                 )
-                .padding(16.dp),
-            contentAlignment = Alignment.CenterEnd
         ) {
             Text(
-                text = "$currency${enteredAmount.value}",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold
+                text = "✕",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Fixed Grid layout instead of LazyVerticalGrid to avoid scrolling
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Row 1: 1, 2, 3
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            AnimatedHeader(text = "Enter Amount")
+
+            // Amount display
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(16.dp),
+                contentAlignment = Alignment.CenterEnd
             ) {
-                for (number in 1..3) {
+                Text(
+                    text = "$currency${enteredAmount.value}",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Fixed Grid layout instead of LazyVerticalGrid to avoid scrolling
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Row 1: 1, 2, 3
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 1..3) {
+                        KeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                enteredAmount.value = if (enteredAmount.value == "0") {
+                                    number.toString()
+                                } else {
+                                    enteredAmount.value + number.toString()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Row 2: 4, 5, 6
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 4..6) {
+                        KeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                enteredAmount.value = if (enteredAmount.value == "0") {
+                                    number.toString()
+                                } else {
+                                    enteredAmount.value + number.toString()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Row 3: 7, 8, 9
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (number in 7..9) {
+                        KeypadButton(
+                            text = number.toString(),
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                enteredAmount.value = if (enteredAmount.value == "0") {
+                                    number.toString()
+                                } else {
+                                    enteredAmount.value + number.toString()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Row 4: Clear, 0, OK
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Clear button
                     KeypadButton(
-                        text = number.toString(),
+                        text = "X",
+                        backgroundColor = Color.Red.copy(alpha = 0.7f),
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            enteredAmount.value = if (enteredAmount.value == "0") {
-                                number.toString()
-                            } else {
-                                enteredAmount.value + number.toString()
+                            enteredAmount.value = "0"
+                        }
+                    )
+
+                    // 0 button
+                    KeypadButton(
+                        text = "0",
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            if (enteredAmount.value != "0") {
+                                enteredAmount.value += "0"
+                            }
+                        }
+                    )
+
+                    // OK button
+                    KeypadButton(
+                        text = "OK",
+                        backgroundColor = Color.Green.copy(alpha = 0.7f),
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            enteredAmount.value.toIntOrNull()?.let { amount ->
+                                if (amount > 0) {
+                                    onAmountEntered(amount)
+                                }
                             }
                         }
                     )
                 }
-            }
 
-            // Row 2: 4, 5, 6
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                for (number in 4..6) {
-                    KeypadButton(
-                        text = number.toString(),
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            enteredAmount.value = if (enteredAmount.value == "0") {
-                                number.toString()
-                            } else {
-                                enteredAmount.value + number.toString()
-                            }
-                        }
+                // Add a spacer before the Cancel button
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Add a Cancel button at the bottom of the keypad
+                Button(
+                    onClick = {
+                        // Pass -2 to go back to amount selection screen
+                        onAmountEntered(-2)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Red.copy(alpha = 0.7f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                ) {
+                    Text(
+                        text = "CANCEL",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
                     )
                 }
-            }
-
-            // Row 3: 7, 8, 9
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                for (number in 7..9) {
-                    KeypadButton(
-                        text = number.toString(),
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            enteredAmount.value = if (enteredAmount.value == "0") {
-                                number.toString()
-                            } else {
-                                enteredAmount.value + number.toString()
-                            }
-                        }
-                    )
-                }
-            }
-
-            // Row 4: Clear, 0, OK
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Clear button
-                KeypadButton(
-                    text = "X",
-                    backgroundColor = Color.Red.copy(alpha = 0.7f),
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        enteredAmount.value = "0"
-                    }
-                )
-
-                // 0 button
-                KeypadButton(
-                    text = "0",
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (enteredAmount.value != "0") {
-                            enteredAmount.value += "0"
-                        }
-                    }
-                )
-
-                // OK button
-                KeypadButton(
-                    text = "OK",
-                    backgroundColor = Color.Green.copy(alpha = 0.7f),
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        enteredAmount.value.toIntOrNull()?.let { amount ->
-                            if (amount > 0) {
-                                onAmountEntered(amount)
-                            }
-                        }
-                    }
-                )
             }
         }
     }
