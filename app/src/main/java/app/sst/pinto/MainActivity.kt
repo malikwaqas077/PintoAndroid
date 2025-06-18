@@ -242,7 +242,7 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
-                    contentAlignment = Alignment.BottomEnd
+                    contentAlignment = Alignment.TopStart
                 ) {
                     PressAndHoldDetector(
                         holdDurationMs = 5000L,

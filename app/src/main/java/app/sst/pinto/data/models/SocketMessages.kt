@@ -43,7 +43,10 @@ data class MessageData(
 sealed class PaymentScreenState {
     object Loading : PaymentScreenState()
     object ConnectionError : PaymentScreenState()
-
+    // Add to the PaymentScreenState sealed class
+    data class RefundProcessing(
+        val errorMessage: String? = null
+    ) : PaymentScreenState()
     data class ReceiptQuestion(
         val showGif: Boolean = true
     ) : PaymentScreenState()

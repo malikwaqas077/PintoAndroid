@@ -491,6 +491,10 @@ fun PaymentScreen(
                     }
                 }
             )
+            // Add this case to the when statement in the AnimatedContent block
+            is PaymentScreenState.RefundProcessing -> RefundProcessingScreen(
+                errorMessage = targetState.errorMessage
+            )
             is PaymentScreenState.Timeout -> TimeoutScreen()
             is PaymentScreenState.Loading -> LoadingScreen()
             is PaymentScreenState.ConnectionError -> ConnectionErrorScreen()
@@ -714,6 +718,92 @@ fun AmountButton(
             fontWeight = FontWeight.Bold,
             fontSize = 28.sp, // Increased font size
             color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun RefundProcessingScreen(errorMessage: String? = null) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "Processing Refund")
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Processing animation - reuse the pending animation
+        GlideImage(
+            model = R.raw.pending,
+            contentDescription = "Processing Refund",
+            modifier = Modifier.size(200.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Message about the refund
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Payment successful but there was an issue with the ticket printer.",
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Processing refund automatically.",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+
+                errorMessage?.let {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = it,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Pulsating text for processing status
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ), label = "pulse"
+        )
+
+        Text(
+            text = "Please wait while we process your refund...",
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(alpha)
         )
     }
 }

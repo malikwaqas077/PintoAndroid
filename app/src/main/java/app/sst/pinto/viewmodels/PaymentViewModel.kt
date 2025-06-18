@@ -671,6 +671,22 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 _screenState.value = PaymentScreenState.ThankYou
                 _isOnAmountScreen.value = false
             }
+            // Add this case to the when statement in handleScreenChange method
+            "REFUND_PROCESSING" -> {
+                Log.d(TAG, "Changing to REFUND_PROCESSING screen")
+                _screenState.value = PaymentScreenState.RefundProcessing(
+                    errorMessage = message.data?.errorMessage
+                )
+                _isOnAmountScreen.value = false
+            }
+            "PRINTER_ERROR" -> {
+                val errorMessage = message.data?.errorMessage ?: "Printer error occurred"
+                Log.d(TAG, "Changing to PRINTER_ERROR screen with message: $errorMessage")
+                _screenState.value = PaymentScreenState.DeviceError(
+                    errorMessage = errorMessage
+                )
+                _isOnAmountScreen.value = false
+            }
             "DEVICE_ERROR" -> {
                 val errorMessage = message.data?.errorMessage ?: "Unknown device error"
                 Log.d(TAG, "Changing to DEVICE_ERROR screen with message: $errorMessage")
