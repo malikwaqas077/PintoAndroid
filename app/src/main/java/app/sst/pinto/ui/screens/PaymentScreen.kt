@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,110 +33,162 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun PaymentScreen(
-    screenState: PaymentScreenState,
-    onAmountSelected: (Int) -> Unit,
-    onPaymentMethodSelected: (String) -> Unit,
-    onReceiptResponse: (Boolean) -> Unit, // Add this new parameter
-    onCancelPayment: () -> Unit = {}
-) {
-    // Track previous state for animations
-    var previousState by remember { mutableStateOf<PaymentScreenState?>(null) }
-    var shouldAnimate by remember { mutableStateOf(previousState != screenState) }
-
-    LaunchedEffect(screenState) {
-        if (previousState != screenState) {
-            previousState = screenState
-            shouldAnimate = true
-        }
-    }
-
-    // Auto-navigate back from limit error screen
-    if (screenState is PaymentScreenState.LimitError) {
-        LaunchedEffect(Unit) {
-            delay(5000) // Wait 5 seconds
-            onAmountSelected(-2) // Custom code to return to amount selection
-        }
-    }
-
-    AnimatedContent(
-        targetState = screenState,
-        transitionSpec = {
-            fadeIn(animationSpec = tween(700)) with
-                    fadeOut(animationSpec = tween(300))
-        }
-    ) { targetState ->
-        // Handle different screen states
-        when (targetState) {
-            // Add this case to the when block in PaymentScreen.kt
-            is PaymentScreenState.ReceiptQuestion -> ReceiptQuestionScreen(
-                onResponseSelected = { wantsReceipt ->
-                    if (wantsReceipt) {
-                        onReceiptResponse(true)
-                    } else {
-                        onReceiptResponse(false)
-                    }
-                }
-            )
-            is PaymentScreenState.Timeout -> TimeoutScreen()
-            is PaymentScreenState.Loading -> LoadingScreen()
-            is PaymentScreenState.ConnectionError -> ConnectionErrorScreen()
-            is PaymentScreenState.AmountSelect -> AmountSelectionScreen(
-                amounts = targetState.amounts,
-                currency = targetState.currency,
-                showOtherOption = targetState.showOtherOption,
-                onAmountSelected = onAmountSelected
-            )
-            is PaymentScreenState.KeypadEntry -> KeypadEntryScreen(
-                currency = targetState.currency,
-                onAmountEntered = onAmountSelected
-            )
-            is PaymentScreenState.PaymentMethodSelect -> PaymentMethodScreen(
-                methods = targetState.methods,
-                amount = targetState.amount,
-                currency = targetState.currency,
-                onMethodSelected = onPaymentMethodSelected,
-                onCancel = onCancelPayment
-            )
-            is PaymentScreenState.QrCodeDisplay -> QrCodeScreen(
-                onCancel = onCancelPayment
-            )
-            is PaymentScreenState.Processing -> ProcessingScreen()
-            is PaymentScreenState.TransactionSuccess -> TransactionSuccessScreen()
-            is PaymentScreenState.TransactionFailed -> TransactionFailedScreen(
-                errorMessage = targetState.errorMessage
-            )
-            is PaymentScreenState.LimitError -> LimitErrorScreen(
-                errorMessage = targetState.errorMessage
-            )
-            is PaymentScreenState.PrintingTicket -> PrintingTicketScreen()
-            is PaymentScreenState.CollectTicket -> CollectTicketScreen()
-            is PaymentScreenState.ThankYou -> ThankYouScreen()
-            is PaymentScreenState.DeviceError -> DeviceErrorScreen(
-                errorMessage = targetState.errorMessage
-            )
-        }
-    }
-}
-@Composable
-fun TimeoutScreen() {
-    Box(
+fun CollectTicketScreen() {
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black), // Optional black background
-        contentAlignment = Alignment.Center
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Display the timeout image at full screen size
-        Image(
-            painter = painterResource(id = R.drawable.timeout),
-            contentDescription = "Session Timeout",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds // This will make the image fill the available space
+        AnimatedHeader(text = "Please collect your ticket")
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Changed to payment_terminal.gif
+        GlideImage(
+            model = R.raw.payment_terminal,
+            contentDescription = "Collect Ticket",
+            modifier = Modifier.size(240.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Attention-grabbing pulsating arrow or text
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 0.9f,
+            targetValue = 1.1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ), label = "pulse"
+        )
+
+        Text(
+            text = "↓ ↓ ↓",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.scale(scale)
         )
     }
 }
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun ThankYouScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Logo at top
+        Image(
+            painter = painterResource(id = R.drawable.logo),
+            contentDescription = "Company Logo",
+            modifier = Modifier
+                .padding(top = 48.dp)
+                .size(160.dp)
+        )
+
+        // Thank you animation
+        GlideImage(
+            model = R.raw.thankyou,
+            contentDescription = "Thank You Animation",
+            modifier = Modifier.size(240.dp)
+        )
+
+        // Thank you text
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(bottom = 48.dp)
+        ) {
+            Text(
+                text = "Thank you",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Have a nice day",
+                fontSize = 24.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun DeviceErrorScreen(errorMessage: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Warning icon
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(Color.Transparent, RoundedCornerShape(percent = 50))
+                .border(4.dp, Color.Red, RoundedCornerShape(percent = 50)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "!",
+                fontSize = 42.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Device out of use",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Text(
+                text = errorMessage,
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Please contact a member of staff for assistance.",
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun ReceiptQuestionScreen(
@@ -223,7 +274,264 @@ fun ReceiptQuestionScreen(
             }
         }
     }
+}@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun TransactionFailedScreen(errorMessage: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "TRANSACTION FAILED")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Failed animation
+        GlideImage(
+            model = R.raw.failed,
+            contentDescription = "Transaction Failed",
+            modifier = Modifier.size(200.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        errorMessage?.let {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = it,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+    }
 }
+
+@Composable
+fun LimitErrorScreen(errorMessage: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color(0xFFFFF9C4)), // Light yellow background
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_warning),
+            contentDescription = "Warning",
+            modifier = Modifier.size(80.dp),
+            tint = Color(0xFFF57C00) // Orange warning color
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Limit Error",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = Color.Black
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = errorMessage,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Auto-navigating back in 5 seconds...
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ), label = "pulse"
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Returning to amount selection...",
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            color = Color.Black,
+            modifier = Modifier.alpha(alpha)
+        )
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun PrintingTicketScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "Printing")
+
+        Text(
+            text = "Ticket",
+            fontSize = 22.sp,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Printing animation
+        GlideImage(
+            model = R.raw.ticket,
+            contentDescription = "Printing Ticket",
+            modifier = Modifier.size(240.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Pulsating text for processing status
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ), label = "pulse"
+        )
+
+        Text(
+            text = "Please wait...",
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(alpha)
+        )
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun PaymentScreen(
+    screenState: PaymentScreenState,
+    onAmountSelected: (Int) -> Unit,
+    onPaymentMethodSelected: (String) -> Unit,
+    onReceiptResponse: (Boolean) -> Unit,
+    onCancelPayment: () -> Unit = {}
+) {
+    // Track previous state for animations
+    var previousState by remember { mutableStateOf<PaymentScreenState?>(null) }
+    var shouldAnimate by remember { mutableStateOf(previousState != screenState) }
+
+    LaunchedEffect(screenState) {
+        if (previousState != screenState) {
+            previousState = screenState
+            shouldAnimate = true
+        }
+    }
+
+    // Auto-navigate back from limit error screen
+    if (screenState is PaymentScreenState.LimitError) {
+        LaunchedEffect(Unit) {
+            delay(5000) // Wait 5 seconds
+            onAmountSelected(-2) // Custom code to return to amount selection
+        }
+    }
+
+    AnimatedContent(
+        targetState = screenState,
+        transitionSpec = {
+            fadeIn(animationSpec = tween(700)) with
+                    fadeOut(animationSpec = tween(300))
+        }
+    ) { targetState ->
+        // Handle different screen states
+        when (targetState) {
+
+            is PaymentScreenState.ReceiptQuestion -> ReceiptQuestionScreen(
+                onResponseSelected = { wantsReceipt ->
+                    if (wantsReceipt) {
+                        onReceiptResponse(true)
+                    } else {
+                        onReceiptResponse(false)
+                    }
+                }
+            )
+            is PaymentScreenState.Timeout -> TimeoutScreen()
+            is PaymentScreenState.Loading -> LoadingScreen()
+            is PaymentScreenState.ConnectionError -> ConnectionErrorScreen()
+            is PaymentScreenState.AmountSelect -> AmountSelectionScreen(
+                amounts = targetState.amounts,
+                currency = targetState.currency,
+                showOtherOption = targetState.showOtherOption,
+                onAmountSelected = onAmountSelected
+            )
+            is PaymentScreenState.KeypadEntry -> KeypadEntryScreen(
+                currency = targetState.currency,
+                onAmountEntered = onAmountSelected
+            )
+            is PaymentScreenState.PaymentMethodSelect -> PaymentMethodScreen(
+                methods = targetState.methods,
+                amount = targetState.amount,
+                currency = targetState.currency,
+                onMethodSelected = onPaymentMethodSelected,
+                onCancel = onCancelPayment
+            )
+            is PaymentScreenState.QrCodeDisplay -> QrCodeScreen(
+                onCancel = onCancelPayment
+            )
+            is PaymentScreenState.Processing -> ProcessingScreen()
+            is PaymentScreenState.TransactionSuccess -> TransactionSuccessScreen()
+            is PaymentScreenState.TransactionFailed -> TransactionFailedScreen(
+                errorMessage = targetState.errorMessage
+            )
+            is PaymentScreenState.LimitError -> LimitErrorScreen(
+                errorMessage = targetState.errorMessage
+            )
+            is PaymentScreenState.PrintingTicket -> PrintingTicketScreen()
+            is PaymentScreenState.CollectTicket -> CollectTicketScreen()
+            is PaymentScreenState.ThankYou -> ThankYouScreen()
+            is PaymentScreenState.DeviceError -> DeviceErrorScreen(
+                errorMessage = targetState.errorMessage
+            )
+
+
+        }
+    }
+}
+
 @Composable
 fun AnimatedHeader(text: String) {
     var animationPlayed by remember { mutableStateOf(false) }
@@ -303,7 +611,23 @@ fun ConnectionErrorScreen() {
         )
     }
 }
-
+@Composable
+fun TimeoutScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black), // Optional black background
+        contentAlignment = Alignment.Center
+    ) {
+        // Display the timeout image at full screen size
+        Image(
+            painter = painterResource(id = R.drawable.timeout),
+            contentDescription = "Session Timeout",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds // This will make the image fill the available space
+        )
+    }
+}
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun AmountSelectionScreen(
@@ -350,7 +674,9 @@ fun AmountSelectionScreen(
             }
         }
     }
-}@Composable
+}
+
+@Composable
 fun AmountButton(
     amount: Int?,
     currency: String,
@@ -390,8 +716,6 @@ fun AmountButton(
     }
 }
 
-
-
 @Composable
 fun KeypadEntryScreen(
     currency: String,
@@ -399,194 +723,144 @@ fun KeypadEntryScreen(
 ) {
     val enteredAmount = remember { mutableStateOf("0") }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Cancel button in top-left corner
-        IconButton(
-            onClick = {
-                // Pass -2 to go back to amount selection screen
-                onAmountEntered(-2)
-            },
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center, // Center alignment
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "Enter Amount")
+
+        // Amount display
+        Box(
             modifier = Modifier
+                .fillMaxWidth()
                 .padding(16.dp)
-                .size(48.dp)
-                .align(Alignment.TopStart)
-                .background(
-                    color = Color.Red.copy(alpha = 0.1f),
-                    shape = CircleShape
+                .border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(12.dp)
                 )
+                .padding(16.dp),
+            contentAlignment = Alignment.CenterEnd
         ) {
             Text(
-                text = "✕",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Red
+                text = "$currency${enteredAmount.value}",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold
             )
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Fixed Grid layout instead of LazyVerticalGrid to avoid scrolling
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AnimatedHeader(text = "Enter Amount")
-
-            // Amount display
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .border(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(16.dp),
-                contentAlignment = Alignment.CenterEnd
+            // Row 1: 1, 2, 3
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "$currency${enteredAmount.value}",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                for (number in 1..3) {
+                    KeypadButton(
+                        text = number.toString(),
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            enteredAmount.value = if (enteredAmount.value == "0") {
+                                number.toString()
+                            } else {
+                                enteredAmount.value + number.toString()
+                            }
+                        }
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Fixed Grid layout instead of LazyVerticalGrid to avoid scrolling
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Row 2: 4, 5, 6
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Row 1: 1, 2, 3
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    for (number in 1..3) {
-                        KeypadButton(
-                            text = number.toString(),
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                enteredAmount.value = if (enteredAmount.value == "0") {
-                                    number.toString()
-                                } else {
-                                    enteredAmount.value + number.toString()
-                                }
-                            }
-                        )
-                    }
-                }
-
-                // Row 2: 4, 5, 6
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    for (number in 4..6) {
-                        KeypadButton(
-                            text = number.toString(),
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                enteredAmount.value = if (enteredAmount.value == "0") {
-                                    number.toString()
-                                } else {
-                                    enteredAmount.value + number.toString()
-                                }
-                            }
-                        )
-                    }
-                }
-
-                // Row 3: 7, 8, 9
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    for (number in 7..9) {
-                        KeypadButton(
-                            text = number.toString(),
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                enteredAmount.value = if (enteredAmount.value == "0") {
-                                    number.toString()
-                                } else {
-                                    enteredAmount.value + number.toString()
-                                }
-                            }
-                        )
-                    }
-                }
-
-                // Row 4: Clear, 0, OK
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Clear button
+                for (number in 4..6) {
                     KeypadButton(
-                        text = "X",
-                        backgroundColor = Color.Red.copy(alpha = 0.7f),
+                        text = number.toString(),
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            enteredAmount.value = "0"
-                        }
-                    )
-
-                    // 0 button
-                    KeypadButton(
-                        text = "0",
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            if (enteredAmount.value != "0") {
-                                enteredAmount.value += "0"
-                            }
-                        }
-                    )
-
-                    // OK button
-                    KeypadButton(
-                        text = "OK",
-                        backgroundColor = Color.Green.copy(alpha = 0.7f),
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            enteredAmount.value.toIntOrNull()?.let { amount ->
-                                if (amount > 0) {
-                                    onAmountEntered(amount)
-                                }
+                            enteredAmount.value = if (enteredAmount.value == "0") {
+                                number.toString()
+                            } else {
+                                enteredAmount.value + number.toString()
                             }
                         }
                     )
                 }
+            }
 
-                // Add a spacer before the Cancel button
-                Spacer(modifier = Modifier.height(20.dp))
+            // Row 3: 7, 8, 9
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                for (number in 7..9) {
+                    KeypadButton(
+                        text = number.toString(),
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            enteredAmount.value = if (enteredAmount.value == "0") {
+                                number.toString()
+                            } else {
+                                enteredAmount.value + number.toString()
+                            }
+                        }
+                    )
+                }
+            }
 
-                // Add a Cancel button at the bottom of the keypad
-                Button(
+            // Row 4: Clear, 0, OK
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Clear button
+                KeypadButton(
+                    text = "X",
+                    backgroundColor = Color.Red.copy(alpha = 0.7f),
+                    modifier = Modifier.weight(1f),
                     onClick = {
-                        // Pass -2 to go back to amount selection screen
-                        onAmountEntered(-2)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Red.copy(alpha = 0.7f)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                ) {
-                    Text(
-                        text = "CANCEL",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
+                        enteredAmount.value = "0"
+                    }
+                )
+
+                // 0 button
+                KeypadButton(
+                    text = "0",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        if (enteredAmount.value != "0") {
+                            enteredAmount.value += "0"
+                        }
+                    }
+                )
+
+                // OK button
+                KeypadButton(
+                    text = "OK",
+                    backgroundColor = Color.Green.copy(alpha = 0.7f),
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        enteredAmount.value.toIntOrNull()?.let { amount ->
+                            if (amount > 0) {
+                                onAmountEntered(amount)
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -871,329 +1145,6 @@ fun TransactionSuccessScreen() {
         Text(
             text = "Please remove your card",
             fontSize = 18.sp,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-fun TransactionFailedScreen(errorMessage: String?) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        AnimatedHeader(text = "TRANSACTION FAILED")
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Failed animation
-        GlideImage(
-            model = R.raw.failed,
-            contentDescription = "Transaction Failed",
-            modifier = Modifier.size(200.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        errorMessage?.let {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Text(
-                    text = it,
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun LimitErrorScreen(errorMessage: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .background(Color(0xFFFFF9C4)), // Light yellow background
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_warning),
-            contentDescription = "Warning",
-            modifier = Modifier.size(80.dp),
-            tint = Color(0xFFF57C00) // Orange warning color
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Limit Error",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = Color.Black
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = errorMessage,
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        // Auto-navigating back in 5 seconds...
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val alpha by infiniteTransition.animateFloat(
-            initialValue = 0.5f,
-            targetValue = 1.0f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1000),
-                repeatMode = RepeatMode.Reverse
-            ), label = "pulse"
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Returning to amount selection...",
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center,
-            color = Color.Black,
-            modifier = Modifier.alpha(alpha)
-        )
-    }
-}
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-fun PrintingTicketScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        AnimatedHeader(text = "Printing")
-
-        Text(
-            text = "Ticket",
-            fontSize = 22.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Printing animation
-        GlideImage(
-            model = R.raw.ticket,
-            contentDescription = "Printing Ticket",
-            modifier = Modifier.size(240.dp)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Pulsating text for processing status
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val alpha by infiniteTransition.animateFloat(
-            initialValue = 0.5f,
-            targetValue = 1.0f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1000),
-                repeatMode = RepeatMode.Reverse
-            ), label = "pulse"
-        )
-
-        Text(
-            text = "Please wait...",
-            fontSize = 18.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.alpha(alpha)
-        )
-    }
-}
-
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-fun CollectTicketScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        AnimatedHeader(text = "Please collect your ticket")
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Changed to payment_terminal.gif
-        GlideImage(
-            model = R.raw.payment_terminal,
-            contentDescription = "Collect Ticket",
-            modifier = Modifier.size(240.dp)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Attention-grabbing pulsating arrow or text
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0.9f,
-            targetValue = 1.1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1000),
-                repeatMode = RepeatMode.Reverse
-            ), label = "pulse"
-        )
-
-        Text(
-            text = "↓ ↓ ↓",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.scale(scale)
-        )
-    }
-}
-
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-fun ThankYouScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Logo at top
-        Image(
-            painter = painterResource(id = R.drawable.logo),
-            contentDescription = "Company Logo",
-            modifier = Modifier
-                .padding(top = 48.dp)
-                .size(160.dp)
-        )
-
-        // Thank you animation
-        GlideImage(
-            model = R.raw.thankyou,
-            contentDescription = "Thank You Animation",
-            modifier = Modifier.size(240.dp)
-        )
-
-        // Thank you text
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(bottom = 48.dp)
-        ) {
-            Text(
-                text = "Thank you",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Have a nice day",
-                fontSize = 24.sp,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun DeviceErrorScreen(errorMessage: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Warning icon
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .background(Color.Transparent, RoundedCornerShape(percent = 50))
-                .border(4.dp, Color.Red, RoundedCornerShape(percent = 50)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "!",
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Red
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Device out of use",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Text(
-                text = errorMessage,
-                fontSize = 18.sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Please contact a member of staff for assistance.",
-            fontSize = 16.sp,
             textAlign = TextAlign.Center
         )
     }

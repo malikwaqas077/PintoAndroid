@@ -3,7 +3,6 @@ package app.sst.pinto.viewmodels
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.sst.pinto.data.models.MessageData
 import app.sst.pinto.data.models.PaymentScreenState
@@ -27,7 +26,6 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     private val configManager = ConfigManager.getInstance(getApplication())
 
     // Store the server URL as a class property
-//    private var serverUrl: String = "ws://192.168.2.112:5001"
     private var serverUrl: String = configManager.getServerUrl()
 
     private val _screenState = MutableStateFlow<PaymentScreenState>(PaymentScreenState.Loading)
@@ -61,18 +59,16 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             handleTimeout()
         }
 
-        // Monitor timeout state to show screensaver
+        // Monitor timeout state to show screensaver directly
         viewModelScope.launch {
             timeoutManager.timeoutOccurred.collect { occurred ->
                 Log.d(TAG, "Timeout state changed: $occurred")
-                if (occurred) {
-                    Log.d(TAG, "Timeout occurred, showing screensaver")
+                if (occurred && _isOnAmountScreen.value) {
+                    Log.d(TAG, "Timeout occurred while on amount screen, showing screensaver")
                     // Pause timers when showing screensaver
                     timeoutManager.pauseTimersForScreensaver()
 
-                    // First set to false to guarantee state change
-                    _isScreensaverVisible.value = false
-                    // Then set to true
+                    // Show screensaver
                     _isScreensaverVisible.value = true
                 }
             }
@@ -100,10 +96,6 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         }
 
         // Monitor socket connection state
-        // In the PaymentViewModel.kt file
-// Update the code to directly switch to ConnectionError
-
-// For example, in the socketManager connection state collector:
         viewModelScope.launch {
             socketManager.connectionState.collect { state ->
                 Log.d(TAG, "Socket connection state changed: $state")
@@ -167,25 +159,29 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      */
     private fun handleTimeout() {
         Log.d(TAG, "Handling timeout event")
-        // Save current state before changing to screensaver
-        if (_screenState.value !is PaymentScreenState.DeviceError &&
-            _screenState.value !is PaymentScreenState.ConnectionError) {
-            lastActiveState = _screenState.value
-            Log.d(TAG, "Saved last active state: ${lastActiveState?.javaClass?.simpleName}")
+        // Only trigger screensaver if on the amount selection screen
+        if (_isOnAmountScreen.value) {
+            // Save current state before changing to screensaver
+            if (_screenState.value !is PaymentScreenState.DeviceError &&
+                _screenState.value !is PaymentScreenState.ConnectionError) {
+                lastActiveState = _screenState.value
+                Log.d(TAG, "Saved last active state: ${lastActiveState?.javaClass?.simpleName}")
+            }
+
+            // Cancel any active transaction
+            cancelPayment(isTimeout = true)
+        } else {
+            Log.d(TAG, "Not on amount screen, ignoring timeout")
+            // Reset the timeout timer
+            timeoutManager.recordUserInteraction()
         }
-
-        // Cancel any active transaction
-        cancelPayment(isTimeout = true)
-
-        // Note: We don't need to explicitly show screensaver here as it's handled by
-        // the timeout flow collector
     }
 
     fun selectAmount(amount: Int) {
         Log.d(TAG, "Amount selected: $amount")
         recordUserInteraction()
 
-        // Special code -2 is used to return to amount selection from limit error or to cancel keypad entry
+        // Special code -2 is used to return to amount selection from limit error
         if (amount == -2) {
             val transactionId = UUID.randomUUID().toString()
             currentTransactionId = transactionId
@@ -261,8 +257,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         if (transactionId == null) {
             Log.d(TAG, "Cannot cancel payment: No active transaction ID")
             // If there's no active transaction but this is a timeout,
-            // we should still show the screensaver
-            if (isTimeout) {
+            // we should still show the screensaver if on amount screen
+            if (isTimeout && _isOnAmountScreen.value) {
                 Log.d(TAG, "No active transaction, but showing screensaver due to timeout")
                 forceShowScreensaver()
             }
@@ -304,8 +300,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             sendMessage(resetMessage)
         }
 
-        // If this is a timeout, show the screensaver
-        if (isTimeout) {
+        // If this is a timeout and we're on the amount screen, show the screensaver
+        if (isTimeout && _isOnAmountScreen.value) {
             forceShowScreensaver()
         }
     }
@@ -326,8 +322,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Pause all timers when showing screensaver
         timeoutManager.pauseTimersForScreensaver()
 
-        // Show screensaver immediately - explicitly toggle to false first to ensure state change
-        _isScreensaverVisible.value = false
+        // Show screensaver immediately
         _isScreensaverVisible.value = true
     }
 
@@ -439,13 +434,14 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             socketManager.ensureConnected()
         }
     }
-    // Add this function to PaymentViewModel
+
     fun retryConnection() {
         Log.d(TAG, "Retrying connection to $serverUrl")
         _screenState.value = PaymentScreenState.Loading
         socketManager.disconnect()
         connectToBackend(serverUrl)
     }
+
     /**
      * Send a message to the server with better error handling
      */
@@ -493,6 +489,9 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     /**
      * Process messages received from the socket
      */
+
+    // Add this enhanced logging to processSocketMessage method in PaymentViewModel.kt
+
     private fun processSocketMessage(jsonMessage: String) {
         try {
             val message = messageAdapter.fromJson(jsonMessage)
@@ -500,17 +499,36 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             message?.let {
                 // Store transaction ID for response
                 currentTransactionId = it.transactionId
-                Log.d(TAG, "Processing message type: ${it.messageType}, screen: ${it.screen}")
+                Log.d(TAG, "=== SOCKET MESSAGE RECEIVED ===")
+                Log.d(TAG, "Raw JSON: $jsonMessage")
+                Log.d(TAG, "Message Type: ${it.messageType}")
+                Log.d(TAG, "Screen: ${it.screen}")
+                Log.d(TAG, "Transaction ID: ${it.transactionId}")
+                Log.d(TAG, "Current Screen State: ${_screenState.value::class.simpleName}")
+                Log.d(TAG, "Timestamp: ${it.timestamp}")
+                Log.d(TAG, "================================")
 
                 when (it.messageType) {
-                    "SCREEN_CHANGE" -> handleScreenChange(it)
-                    "ERROR" -> handleError(it)
-                    "STATUS_UPDATE" -> handleStatusUpdate(it)
+                    "SCREEN_CHANGE" -> {
+                        Log.d(TAG, "Processing SCREEN_CHANGE to: ${it.screen}")
+                        handleScreenChange(it)
+                        Log.d(TAG, "New Screen State: ${_screenState.value::class.simpleName}")
+                    }
+                    "ERROR" -> {
+                        Log.d(TAG, "Processing ERROR message")
+                        handleError(it)
+                    }
+                    "STATUS_UPDATE" -> {
+                        Log.d(TAG, "Processing STATUS_UPDATE message")
+                        handleStatusUpdate(it)
+                    }
+
+                    else -> {}
                 }
             }
         } catch (e: Exception) {
             // Handle parsing error
-            Log.e(TAG, "Error parsing socket message", e)
+            Log.e(TAG, "Error parsing socket message: $jsonMessage", e)
             _screenState.value = PaymentScreenState.DeviceError("Invalid message format: ${e.message}")
             // Make sure to update screen state flag
             _isOnAmountScreen.value = false
@@ -542,6 +560,9 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         sendMessage(message)
     }
+
+    // In PaymentViewModel.kt, update the handleScreenChange method
+
     private fun handleScreenChange(message: SocketMessage) {
         Log.d(TAG, "Handling screen change to: ${message.screen}")
         when (message.screen) {
@@ -568,15 +589,13 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 _isOnAmountScreen.value = false
             }
             "TIMEOUT" -> {
-                Log.d(TAG, "Changing to TIMEOUT screen")
+                Log.d(TAG, "Server sent TIMEOUT message - showing timeout screen")
                 _screenState.value = PaymentScreenState.Timeout
                 _isOnAmountScreen.value = false
 
-                // Auto-navigate back to amount selection after a few seconds
-                viewModelScope.launch {
-                    delay(5000) // Wait 5 seconds
-                    requestInitialScreen() // Return to amount selection
-                }
+                // REMOVE THIS AUTO-NAVIGATION - let the server control the flow
+                // The server will send the next screen when ready
+                // Don't auto-navigate after timeout
             }
             "KEYPAD" -> {
                 Log.d(TAG, "Changing to KEYPAD screen")

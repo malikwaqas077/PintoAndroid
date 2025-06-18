@@ -29,7 +29,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sst.pinto.ui.components.Screensaver
-import app.sst.pinto.ui.components.TimeoutWarning
 import app.sst.pinto.ui.screens.PaymentScreen
 import app.sst.pinto.ui.theme.PintoTheme
 import app.sst.pinto.utils.TimeoutManager
@@ -46,10 +45,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate called")
-
-        // Make the app fullscreen and hide system UI
-        setupFullscreen()
-
         enableEdgeToEdge()
 
         // Initialize managers
@@ -72,40 +67,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun setupFullscreen() {
-        // Hide the status bar and navigation bar
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.apply {
-            // Hide both status bar and navigation bar
-            hide(WindowInsetsCompat.Type.systemBars())
-            // Set behavior for when user swipes from edges
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-
-        // Keep screen on (useful for kiosk apps)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        // Additional flags for immersive mode
-        window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_FULLSCREEN
-                )
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            // Re-apply fullscreen when window regains focus
-            setupFullscreen()
-        }
-    }
-
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         // Record user interaction for any touch event
         if (ev?.action == MotionEvent.ACTION_DOWN) {
@@ -125,8 +86,6 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "onResume called")
         // Reset timeout timer when app comes back to foreground
         timeoutManager.recordUserInteraction()
-        // Re-apply fullscreen mode
-        setupFullscreen()
     }
 
     override fun onDestroy() {
@@ -142,7 +101,6 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
     val screenState by viewModel.screenState.collectAsState()
     val isScreensaverVisible by viewModel.isScreensaverVisible.collectAsState()
     val isOnAmountScreen by viewModel.isOnAmountScreen.collectAsState()
-    val timeoutManager = TimeoutManager.getInstance()
 
     // Server configuration state
     var showServerConfig by remember { mutableStateOf(configManager.isFirstLaunch()) }
@@ -200,19 +158,7 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
                 }
             )
 
-            // Timeout warning (only when not on amount screen)
-            TimeoutWarning(
-                timeoutManager = timeoutManager,
-                onContinue = {
-                    viewModel.recordUserInteraction()
-                },
-                onTimeout = {
-                    viewModel.cancelPayment(isTimeout = true)
-                    viewModel.forceShowScreensaver()
-                }
-            )
-
-            // Screensaver
+            // Screensaver - only shows when visible flag is true
             Screensaver(
                 isVisible = isScreensaverVisible,
                 videoResId = screensaverVideoResId,

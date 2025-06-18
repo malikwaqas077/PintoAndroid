@@ -47,6 +47,7 @@ sealed class PaymentScreenState {
     data class ReceiptQuestion(
         val showGif: Boolean = true
     ) : PaymentScreenState()
+
     data class AmountSelect(
         val amounts: List<Int>,
         val currency: String,
@@ -67,8 +68,7 @@ sealed class PaymentScreenState {
     ) : PaymentScreenState()
 
     object Processing : PaymentScreenState()
-    object Timeout : PaymentScreenState()
-
+    object Timeout : PaymentScreenState()  // ← ADD THIS LINE
 
     data class TransactionSuccess(val showReceipt: Boolean) : PaymentScreenState()
 
