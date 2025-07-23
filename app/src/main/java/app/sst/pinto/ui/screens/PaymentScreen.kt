@@ -196,6 +196,17 @@ fun DeviceErrorScreen(errorMessage: String) {
 fun ReceiptQuestionScreen(
     onResponseSelected: (Boolean) -> Unit
 ) {
+    // Add a loading state to track when buttons should be disabled
+    var isButtonsEnabled by remember { mutableStateOf(true) }
+
+    // Function to handle button clicks and disable buttons
+    fun handleResponse(wantsReceipt: Boolean) {
+        if (isButtonsEnabled) {
+            isButtonsEnabled = false // Disable buttons immediately
+            onResponseSelected(wantsReceipt)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -239,44 +250,69 @@ fun ReceiptQuestionScreen(
         ) {
             // YES button
             Button(
-                onClick = { onResponseSelected(true) },
+                onClick = { handleResponse(true) },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF1A8CFF) // Blue color as shown in the image
+                    containerColor = Color(0xFF1A8CFF), // Blue color as shown in the image
+                    disabledContainerColor = Color(0xFF1A8CFF).copy(alpha = 0.5f) // Dimmed when disabled
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                enabled = isButtonsEnabled
             ) {
-                Text(
-                    text = "YES",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                if (!isButtonsEnabled) {
+                    // Show loading indicator if this button was clicked
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "YES",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
 
             // NO button
             Button(
-                onClick = { onResponseSelected(false) },
+                onClick = { handleResponse(false) },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF5C44) // Orange-red color as shown in the image
+                    containerColor = Color(0xFFFF5C44), // Orange-red color as shown in the image
+                    disabledContainerColor = Color(0xFFFF5C44).copy(alpha = 0.5f) // Dimmed when disabled
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                enabled = isButtonsEnabled
             ) {
-                Text(
-                    text = "NO",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                if (!isButtonsEnabled) {
+                    // Show loading indicator if this button was clicked
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "NO",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }
-}@OptIn(ExperimentalGlideComposeApi::class)
+}
+
+
+@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun TransactionFailedScreen(errorMessage: String?) {
     Column(
