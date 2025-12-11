@@ -13,3 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+java_pid*.hprof
+
+app/release/*.apk
+
+app/release/baselineProfiles/**
+
+pinto.jks
