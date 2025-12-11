@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "app.sst.pinto"
-        minSdk = 21
+        minSdk = 29
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -20,28 +20,53 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(project.property("PINTO_STORE_FILE").toString())
+            storePassword = project.property("PINTO_STORE_PASSWORD").toString()
+            keyAlias = project.property("PINTO_KEY_ALIAS").toString()
+            keyPassword = project.property("PINTO_KEY_PASSWORD").toString()
+
+            // Enable V2+ signing to fix Janus vulnerability
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
     buildFeatures {
         compose = true
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -66,7 +91,6 @@ dependencies {
     implementation ("androidx.media3:media3-exoplayer:1.2.0")
     implementation ("androidx.media3:media3-ui:1.2.0")
     implementation ("androidx.media3:media3-common:1.2.0")
-
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
