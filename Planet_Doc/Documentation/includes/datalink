@@ -1,0 +1,634 @@
+<h1 id='datalinks'>Datalinks</h1>
+<p>Datalinks encapsulate the data sent to the terminal and are able to provide basic checks such as error detection and message validation. For example, <a href="#datalinks-datalink">Datalink</a> sends messages as-is, <a href="#datalinks-datalinkstxetxcrcsendackseqcounter">DatalinkStxEtxCrcSendAckSeqConter</a> contains data meant to detect duplicate, missing and/or faulty messages
+Datalinks can be instantiated directly or via the <a href="#datalinkfactory">DatalinkFactory</a> singleton. </p>
+<h2 id='datalinks-idatalink'>IDatalink</h2>
+<p>IDatalink is a generic interface common to all datalink</p>
+<h3 id='datalinks-idatalink-methods'>Methods</h3><h3 id='datalinks-idatalink-setoptions'>setOptions</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span><span class="p">;</span>
+<span class="n">datalinkOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">KEY_ACK_TIMEOUT</span><span class="p">,</span> <span class="s">"30000"</span><span class="p">));</span>
+
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setOptions</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();;</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">KEY_ACK_TIMEOUT</span><span class="o">,</span> <span class="s">"30000"</span><span class="o">));</span>
+
+<span class="n">datalink</span><span class="o">.</span><span class="na">setOptions</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">datalinkOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="n">KEY_ACK_TIMEOUT</span><span class="p">,</span> <span class="s">"30000"</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setOptions</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+
+<span class="k">var</span> <span class="nv">datalinkOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="s">"30000"</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">key_ACK_TIMEOUT</span><span class="p">())</span>
+
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setOptions</span><span class="p">(</span><span class="nv">datalinkOptions</span><span class="p">:</span> <span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">datalinkOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">KEY_ACK_TIMEOUT</span><span class="p">]</span><span class="o">:</span> <span class="s">@"30000"</span>
+<span class="p">};</span>
+
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setOptions</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>setOptions allows you to set any <a href="#datalinkfactory-options">Datalink options</a> to an instanced datalink. Only the relevant options will be applied (for example, the key KEY_ACK_TIMEOUT will not be applied to the standard <a href="#datalinks-datalink">Datalink</a> since it is not supported)</p>
+<h2 id='datalinks-datalink'>Datalink</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Datalink</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span><span class="p">;</span>
+<span class="n">datalinkOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">Datalink</span><span class="o">::</span><span class="n">DATALINK_TYPE_VALUE</span><span class="p">));</span>
+
+<span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Datalink</span><span class="o">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">KEY_DATALINK</span><span class="o">,</span> <span class="nc">Datalink</span><span class="o">.</span><span class="na">DATALINK_TYPE_VALUE</span><span class="o">));</span>
+
+<span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalink</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Datalink</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">datalinkOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">Datalink</span><span class="p">.</span><span class="n">DATALINK_TYPE_VALUE</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalink</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="k">var</span> <span class="nv">datalinkOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPDatalink</span><span class="o">.</span><span class="nf">datalink_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">key_DATALINK</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalink</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">datalinkOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">KEY_DATALINK</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPDatalink</span> <span class="nf">DATALINK_TYPE_VALUE</span><span class="p">]</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalink</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This datalink sends data as-is without any encapsulation</p>
+<h2 id='datalinks-datalinkstxetxacklrc'>DatalinkStxEtxAckLrc</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxAckLrc</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span><span class="p">;</span>
+<span class="n">datalinkOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">DatalinkStxEtxAckLrc</span><span class="o">::</span><span class="n">DATALINK_TYPE_VALUE</span><span class="p">));</span>
+
+<span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxAckLrc</span><span class="o">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();;</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">KEY_DATALINK</span><span class="o">,</span> <span class="nc">DatalinkStxEtxAckLrc</span><span class="o">.</span><span class="na">DATALINK_TYPE_VALUE</span><span class="o">));</span>
+
+<span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalink</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxAckLrc</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">datalinkOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">DatalinkStxEtxAckLrc</span><span class="p">.</span><span class="n">DATALINK_TYPE_VALUE</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxAckLrc</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="k">var</span> <span class="nv">datalinkOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPDatalinkStxEtxAckLrc</span><span class="o">.</span><span class="nf">datalink_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">key_DATALINK</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxAckLrc</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">datalinkOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">KEY_DATALINK</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPDatalinkStxEtxAckLrc</span> <span class="nf">DATALINK_TYPE_VALUE</span><span class="p">]</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalink</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This datalink encapsulates the data and provides ACK and LRC checks</p>
+<h3 id='datalinks-datalinkstxetxacklrc-methods'>Methods</h3><h3 id='datalinks-datalinkstxetxacklrc-setacktimeout'>setAckTimeout</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxAckLrc</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxAckLrc</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxAckLrc</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxAckLrc</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setAckTimeout</span><span class="o">(</span><span class="n">ackTimeout</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxAckLrc</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxAckLrc</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxAckLrc</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxAckLrc</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxAckLrc</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxAckLrc</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setAckTimeout</span><span class="p">:</span><span class="n">ackTimeout</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets how long this datalink will wait for an ACK</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ackTimeout</td>
+<td>Integer</td>
+<td>The maximum ACK timeout for the datalink, in milliseconds</td>
+</tr>
+</tbody></table>
+<h3 id='datalinks-datalinkstxetxacklrc-setackmaxcounter'>setAckMaxCounter</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxAckLrc</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxAckLrc</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxAckLrc</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxAckLrc</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setAckMaxCounter</span><span class="o">(</span><span class="n">ackCounter</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxAckLrc</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxAckLrc</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxAckLrc</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxAckLrc</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxAckLrc</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxAckLrc</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setAckMaxCounter</span><span class="p">:</span><span class="n">ackCounter</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the maximum ACK resend attempts by the Datalink</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ackCounter</td>
+<td>Integer</td>
+<td>The maximum number of times a resend attempt for an ACK is made</td>
+</tr>
+</tbody></table>
+<h2 id='datalinks-datalinkstxetxcrcsendack'>DatalinkStxEtxCrcSendAck</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAck</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span><span class="p">;</span>
+<span class="n">datalinkOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">DatalinkStxEtxCrcSendAck</span><span class="o">::</span><span class="n">DATALINK_TYPE_VALUE</span><span class="p">));</span>
+
+<span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAck</span><span class="o">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();;</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">KEY_DATALINK</span><span class="o">,</span> <span class="nc">DatalinkStxEtxCrcSendAck</span><span class="o">.</span><span class="na">DATALINK_TYPE_VALUE</span><span class="o">));</span>
+
+<span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalink</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAck</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">datalinkOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">DatalinkStxEtxCrcSendAck</span><span class="p">.</span><span class="n">DATALINK_TYPE_VALUE</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAck</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="k">var</span> <span class="nv">datalinkOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPDatalinkStxEtxCrcSendAck</span><span class="o">.</span><span class="nf">datalink_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">key_DATALINK</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAck</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">datalinkOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">KEY_DATALINK</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPDatalinkStxEtxCrcSendAck</span> <span class="nf">DATALINK_TYPE_VALUE</span><span class="p">]</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalink</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This datalink encapsulates the data and provides CRC checks and sends an ACK byte</p>
+<h3 id='datalinks-datalinkstxetxcrcsendack-methods'>Methods</h3><h3 id='datalinks-datalinkstxetxcrcsendack-setacktimeout'>setAckTimeout</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAck</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAck</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAck</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAck</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setAckTimeout</span><span class="o">(</span><span class="n">ackTimeout</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAck</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAck</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAck</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAck</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAck</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAck</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setAckTimeout</span><span class="p">:</span><span class="n">ackTimeout</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets how long this datalink will wait for an ACK</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ackTimeout</td>
+<td>Integer</td>
+<td>The maximum ACK timeout for the datalink, in milliseconds</td>
+</tr>
+</tbody></table>
+<h3 id='datalinks-datalinkstxetxcrcsendack-setackmaxcounter'>setAckMaxCounter</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAck</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAck</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAck</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAck</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setAckMaxCounter</span><span class="o">(</span><span class="n">ackCounter</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAck</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAck</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAck</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAck</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAck</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAck</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setAckMaxCounter</span><span class="p">:</span><span class="n">ackCounter</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the maximum ACK resend attempts by the Datalink</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ackCounter</td>
+<td>Integer</td>
+<td>The maximum number of times a resend attempt for an ACK is made</td>
+</tr>
+</tbody></table>
+<h2 id='datalinks-datalinkstxetxcrcsendackseqcounter'>DatalinkStxEtxCrcSendAckSeqCounter</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span><span class="p">;</span>
+<span class="n">datalinkOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">::</span><span class="n">DATALINK_TYPE_VALUE</span><span class="p">));</span>
+
+<span class="n">IDatalink</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">datalinkOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();;</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">KEY_DATALINK</span><span class="o">,</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="na">DATALINK_TYPE_VALUE</span><span class="o">));</span>
+
+<span class="nc">IDatalink</span> <span class="n">datalink</span> <span class="o">=</span> <span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalink</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">datalinkOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="n">KEY_DATALINK</span><span class="p">,</span> <span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">.</span><span class="n">DATALINK_TYPE_VALUE</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IDatalink</span> <span class="n">datalink</span> <span class="p">=</span> <span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="k">var</span> <span class="nv">datalinkOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">datalinkOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">datalink_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">key_DATALINK</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPIDatalink</span> <span class="o">=</span> <span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+
+<span class="c1">//Via DatalinkFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">datalinkOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">KEY_DATALINK</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">DATALINK_TYPE_VALUE</span><span class="p">]</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIDatalink</span><span class="o">&gt;</span> <span class="n">datalink</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalink</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This datalink encapsulates the data and provides CRC checks, sends an ACk byte, and checks for missing / duplicate messages</p>
+<h3 id='datalinks-datalinkstxetxcrcsendackseqcounter-methods'>Methods</h3><h3 id='datalinks-datalinkstxetxcrcsendackseqcounter-setacktimeout'>setAckTimeout</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setAckTimeout</span><span class="o">(</span><span class="n">ackTimeout</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setAckTimeout</span><span class="p">(</span><span class="n">ackTimeout</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setAckTimeout</span><span class="p">:</span><span class="n">ackTimeout</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets how long this datalink will wait for an ACK</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ackTimeout</td>
+<td>Integer</td>
+<td>The maximum ACK timeout for the datalink, in milliseconds</td>
+</tr>
+</tbody></table>
+<h3 id='datalinks-datalinkstxetxcrcsendackseqcounter-setackmaxcounter'>setAckMaxCounter</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setAckMaxCounter</span><span class="o">(</span><span class="n">ackCounter</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setAckMaxCounter</span><span class="p">(</span><span class="n">ackCounter</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setAckMaxCounter</span><span class="p">:</span><span class="n">ackCounter</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the maximum ACK resend attempts by the Datalink</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ackCounter</td>
+<td>Integer</td>
+<td>The maximum number of times a resend attempt for an ACK is made</td>
+</tr>
+</tbody></table>
+<h3 id='datalinks-datalinkstxetxcrcsendackseqcounter-setkeepaliveinterval'>setKeepAliveInterval</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setKeepAliveInterval</span><span class="p">(</span><span class="n">keepAlive</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setKeepAliveInterval</span><span class="o">(</span><span class="n">keepAlive</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setKeepAliveInterval</span><span class="p">(</span><span class="n">keepAlive</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setKeepAliveInterval</span><span class="p">(</span><span class="n">keepAlive</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setKeepAliveInterval</span><span class="p">:</span><span class="n">keepAlive</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the interval between keep alive packets</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>keepAlive</td>
+<td>Integer</td>
+<td>The interval in milliseconds. 0 disables sending keep-alive packets</td>
+</tr>
+</tbody></table>
+<h3 id='datalinks-datalinkstxetxcrcsendackseqcounter-enableduplicatecheck'>enableDuplicateCheck</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">enableDuplicateCheck</span><span class="p">(</span><span class="n">enableCheck</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">enableDuplicateCheck</span><span class="o">(</span><span class="n">enableCheck</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">enableDuplicateCheck</span><span class="p">(</span><span class="n">enableCheck</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">enableDuplicateCheck</span><span class="p">(</span><span class="n">enableCheck</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">enableDuplicateCheck</span><span class="p">:</span><span class="n">enableCheck</span><span class="p">];</span>
+</code></pre></div>
+<p>Enables the verification for duplicate messages</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>enableCheck</td>
+<td>Boolean</td>
+<td>Enables duplicate messsage checking</td>
+</tr>
+</tbody></table>
+<h3 id='datalinks-datalinkstxetxcrcsendackseqcounter-enablemasknonasciichars'>enableMaskNonAsciiChars</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">enableMaskNonAsciiChars</span><span class="p">(</span><span class="n">enableMask</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">enableMaskNonAsciiChars</span><span class="o">(</span><span class="n">enableMask</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">enableMaskNonAsciiChars</span><span class="p">(</span><span class="n">enableMask</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">enableMaskNonAsciiChars</span><span class="p">(</span><span class="n">enableMask</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">enableMaskNonAsciiChars</span><span class="p">:</span><span class="n">enableMask</span><span class="p">];</span>
+</code></pre></div>
+<p>Enables masking non-ascii chars</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>enableMask</td>
+<td>Boolean</td>
+<td>Enables non-ascii characters masking</td>
+</tr>
+</tbody></table>
+<h3 id='datalinks-datalinkstxetxcrcsendackseqcounter-setnumberofsynbytes'>setNumberOfSynBytes</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="o">-&gt;</span><span class="n">setNumberOfSynBytes</span><span class="p">(</span><span class="n">synBytes</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">();</span>
+<span class="n">datalink</span><span class="o">.</span><span class="na">setNumberOfSynBytes</span><span class="o">(</span><span class="n">synBytes</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkStxEtxCrcSendAckSeqCounter</span> <span class="n">datalink</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">DatalinkStxEtxCrcSendAckSeqCounter</span><span class="p">();</span>
+<span class="n">datalink</span><span class="p">.</span><span class="nf">setNumberOfSynBytes</span><span class="p">(</span><span class="n">synBytes</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">datalink</span><span class="p">:</span><span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">=</span> <span class="kt">PPDatalinkStxEtxCrcSendAckSeqCounter</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="n">datalink</span><span class="o">.</span><span class="nf">setNumberOfSynBytes</span><span class="p">(</span><span class="n">synBytes</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="o">*</span><span class="n">datalink</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPDatalinkStxEtxCrcSendAckSeqCounter</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">datalink</span> <span class="nf">setNumberOfSynBytes</span><span class="p">:</span><span class="n">synBytes</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the amount of SYN bytes sent with each message</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>synBytes</td>
+<td>Integer</td>
+<td>The number of SYN bytes sent with each message</td>
+</tr>
+</tbody></table>
+<h1 id='datalinkfactory'>DatalinkFactory</h1>
+<p>The datalink factory allows you obtain IDatalink instances using a set of options. <a href="#datalinkfactory-options">DatalinkFactory KEY_DATALINK</a> is required. Other options may be required depending on which type of datalink is selected.</p>
+<h2 id='datalinkfactory-datalinktype'>DatalinkType</h2>
+<p>The following datalinks are currently implemented:</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>DATALINK</td>
+<td>This datalink sends data as-is without any encapsulation</td>
+</tr>
+<tr>
+<td>DATALINK_STX_ETX_ACK_LRC</td>
+<td>This datalink encapsulates the data and provides ACK and LRC checks</td>
+</tr>
+<tr>
+<td>DATALINK_STX_ETX_CRC_SEND_ACK</td>
+<td>This datalink encapsulates the data and provides CRC checks, sends an ACk byte, and checks for missing / duplicate messages</td>
+</tr>
+<tr>
+<td>DATALINK_STX_ETX_CRC_SEND_ACK_SEQCOUNTER</td>
+<td>This datalink encapsulates the data and provides CRC checks, sends an ACk byte, and checks for missing / duplicate messages</td>
+</tr>
+</tbody></table>
+<h2 id='datalinkfactory-options'>Options</h2>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>KEY_DATALINK</td>
+<td>The datalink name to use</td>
+</tr>
+<tr>
+<td>KEY_ACK_TIMEOUT</td>
+<td>How long to wait for an ACK. Relevant for DatalinkStxEtxAckLrc, DatalinkStxEtxCrcSendAck and DatalinkStxEtxCrcSendAckSeqCounter</td>
+</tr>
+<tr>
+<td>KEY_ACK_MAX_RETRIES</td>
+<td>How many retry attempts for failed ACK&#39;s. Relevant for DatalinkStxEtxAckLrc, DatalinkStxEtxCrcSendAck and DatalinkStxEtxCrcSendAckSeqCounter</td>
+</tr>
+<tr>
+<td>KEY_KEEP_ALIVE_INTERVAL</td>
+<td>The interval between keep alive packets. Relevant for DatalinkStxEtxCrcSendAckSeqCounter</td>
+</tr>
+<tr>
+<td>KEY_DUPLICATE_CHECK</td>
+<td>Enable message duplicate check. Relevant for DatalinkStxEtxCrcSendAckSeqCounter</td>
+</tr>
+<tr>
+<td>KEY_MASK_NON_ASCII</td>
+<td>Mask non-ascii characters. Relevant for DatalinkStxEtxCrcSendAckSeqCounter</td>
+</tr>
+<tr>
+<td>KEY_SYN_BYTES</td>
+<td>The number of SYN bytes to send with each message. Relevant for DatalinkStxEtxCrcSendAckSeqCounter</td>
+</tr>
+</tbody></table>
+<h2 id='datalinkfactory-methods'>Methods</h2><h3 id='datalinkfactory-methods-getdatalink'>getDatalink</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalink</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalink</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalink</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>Retrieves an IDatalink with the requested options</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>datalinkOptions</td>
+<td>Map</td>
+<td>An option map containing which datalink is being requested, as well as any options for this datalink</td>
+</tr>
+</tbody></table>
+<h3 id='datalinkfactory-methods-getdatalinklist'>getDatalinkList</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalinkList</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalinkList</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalinkList</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalinkList</span><span class="p">()</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalinkList</span><span class="p">];</span>
+</code></pre></div>
+<p>Retrieves a list of all supported datalinks</p>
+<h3 id='datalinkfactory-methods-getoptionsfordatalink'>getOptionsForDatalink</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getOptionsForDatalink</span><span class="p">(</span><span class="n">datalinkName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getOptionsForDatalink</span><span class="o">(</span><span class="n">datalinkName</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getOptionsForDatalink</span><span class="p">(</span><span class="n">datalinkName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getOptionsForDatalink</span><span class="p">(</span><span class="n">datalinkName</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getOptionsForDatalink</span><span class="p">:</span><span class="n">datalinkName</span><span class="p">];</span>
+</code></pre></div>
+<p>Retrives a list of all the required and optional options for a datalink</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>datalinkName</td>
+<td>String</td>
+<td>The datalink name being requested</td>
+</tr>
+</tbody></table>
+<h3 id='datalinkfactory-methods-validateoptions'>validateOptions</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">validateOptions</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">validateOptions</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">validateOptions</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">validateOptions</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">validateOptions</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>Checks if a set of datalinkOptions are correct and contain all required information. <a href="#errors-errortype">ErrorType SUCCESS</a> will be returned if the validate check passes</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>datalinkOptions</td>
+<td>Map</td>
+<td>An option map containing which datalink is being requested, as well as any options for this datalink</td>
+</tr>
+</tbody></table>
+<h3 id='datalinkfactory-methods-getdatalinktype'>getDatalinkType</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalinkType</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalinkType</span><span class="o">(</span><span class="n">datalinkOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalinkType</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalinkType</span><span class="p">(</span><span class="n">datalinkOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalinkType</span><span class="p">:</span><span class="n">datalinkOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>Extracts the DatalinkType from a set of options</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>datalinkOptions</td>
+<td>Map</td>
+<td>An option map containing which datalink is being requested, as well as any options for this datalink</td>
+</tr>
+</tbody></table>
+<h3 id='datalinkfactory-methods-getdatalinktype'>getDatalinkType</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">DatalinkFactory</span><span class="o">::</span><span class="n">getDatalinkType</span><span class="p">(</span><span class="n">datalinkName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">DatalinkFactory</span><span class="o">.</span><span class="na">getDatalinkType</span><span class="o">(</span><span class="n">datalinkName</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">DatalinkFactory</span><span class="p">.</span><span class="nf">getDatalinkType</span><span class="p">(</span><span class="n">datalinkName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPDatalinkFactory</span><span class="o">.</span><span class="nf">getDatalinkType</span><span class="p">(</span><span class="n">datalinkName</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPDatalinkFactory</span> <span class="nf">getDatalinkType</span><span class="p">:</span><span class="n">datalinkName</span><span class="p">];</span>
+</code></pre></div>
+<p>Converts a datalinkName into a DatalinkType</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>datalinkName</td>
+<td>String</td>
+<td>The datalink name to convert into a DatalinkType</td>
+</tr>
+</tbody></table>

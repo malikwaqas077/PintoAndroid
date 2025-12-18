@@ -1,5 +1,28 @@
 # Pinto Android App - Release Notes
 
+## Version 1.1.2 (Build 3)
+
+**Release Date:** December 2025
+
+---
+
+## Overview
+
+This release adds a quick-access diagnostic shortcut for viewing device information directly from the main screen.
+
+---
+
+## New Features
+
+### 1. Quick Device Info Shortcut
+
+- **Serial Number & IP Display**: Users can now quickly view the device serial number and current IP address from the main screen.
+- **Access Gesture**: Press and hold the **top-left corner** of the screen.
+- **PIN Code**: When prompted, enter **38472** to display the device serial number and IP address.
+- **Use Cases**: Simplifies on-site troubleshooting, device identification, and network diagnostics without navigating to the full Settings screen.
+
+---
+
 ## Version 1.1.0 (Build 2)
 
 **Release Date:** December 2025

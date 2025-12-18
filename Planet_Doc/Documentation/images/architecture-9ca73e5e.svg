@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="523px" preserveAspectRatio="none" style="width:256px;height:523px;background:#FFFFFF;" version="1.1" viewBox="0 0 256 523" width="256px" zoomAndPan="magnify"><defs/><g><!--MD5=[373ce27cdb065709cb1ab86f401dd752]
+cluster POS--><g id="cluster_POS"><polygon points="16,16,26,6,239,6,239,220,229,230,16,230,16,16" style="stroke:#181818;stroke-width:1.0;fill:none;"/><line style="stroke:#181818;stroke-width:1.0;fill:none;" x1="229" x2="239" y1="16" y2="6"/><line style="stroke:#181818;stroke-width:1.0;fill:none;" x1="16" x2="229" y1="16" y2="16"/><line style="stroke:#181818;stroke-width:1.0;fill:none;" x1="229" x2="229" y1="16" y2="230"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="32" x="107.5" y="31.9951">POS</text></g><!--MD5=[bf651fdbd8dc621b8c9f8c9bb2faf726]
+cluster Terminal--><g id="cluster_Terminal"><polygon points="20,280,30,270,209,270,209,496,199,506,20,506,20,280" style="stroke:#181818;stroke-width:1.0;fill:none;"/><line style="stroke:#181818;stroke-width:1.0;fill:none;" x1="199" x2="209" y1="280" y2="270"/><line style="stroke:#181818;stroke-width:1.0;fill:none;" x1="20" x2="199" y1="280" y2="280"/><line style="stroke:#181818;stroke-width:1.0;fill:none;" x1="199" x2="199" y1="280" y2="506"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="68" x="76.5" y="295.9951">Terminal</text></g><!--MD5=[53ccf4b3ee6cf4337a0ab93ac09644f3]
+entity main--><g id="elem_main"><rect fill="#F1F1F1" height="46.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="133" x="40.5" y="54"/><rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="153.5" y="59"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="151.5" y="61"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="151.5" y="65"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93" x="55.5" y="86.9951">POS Software</text></g><!--MD5=[97db3ed258f199931cb7ec9b00ff5adb]
+entity SDK--><g id="elem_SDK"><ellipse cx="49" cy="183" fill="#F1F1F1" rx="8" ry="8" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="29" x="34.5" y="212.9951">SDK</text></g><!--MD5=[c4490688c0a4e188eebdf8720832e4d5]
+entity Integra API--><g id="elem_Integra API"><rect fill="#F1F1F1" height="46.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="113" x="93.5" y="160"/><rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="186.5" y="165"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="184.5" y="167"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="184.5" y="171"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="73" x="108.5" y="192.9951">Integra API</text></g><!--MD5=[9b8c4ddb7fd7c3dd805b94e8375599e5]
+entity term--><g id="elem_term"><rect fill="#F1F1F1" height="46.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="110" x="50" y="436"/><rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="140" y="441"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="138" y="443"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="138" y="447"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="70" x="65" y="468.9951">Integra TE</text></g><!--MD5=[189e9a0a5d8ad9751f403cc8629a3d48]
+entity Comm Channel--><g id="elem_Comm Channel"><ellipse cx="105" cy="347" fill="#F1F1F1" rx="8" ry="8" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="106" x="52" y="376.9951">Comm Channel</text></g><!--MD5=[f89ce75c08305ef137b287e98b3f2f4f]
+link SDK to Integra API--><g id="link_SDK_Integra API"><path d="M58.07,183 C69.8,183 81.53,183 93.26,183 " fill="none" id="SDK-Integra API" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[ea0caca62070046096ae5a989a59dd61]
+link main to SDK--><g id="link_main_SDK"><path d="M94.7,100.06 C82.91,121.2 65.52,152.37 55.95,169.53 " fill="none" id="main-to-SDK" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="#181818" points="53.47,173.98,61.3522,168.0748,55.9091,169.6153,54.3686,164.1722,53.47,173.98" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[988dbb9613db57c19cfb99330f08faa9]
+link Comm Channel to term--><g id="link_Comm Channel_term"><path d="M105,356.27 C105,372.96 105,411.16 105,435.71 " fill="none" id="Comm Channel-term" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[824e21d31b40dc49400bb9821a1d928c]
+link POS to Terminal--><!--MD5=[1dbc328eed0049a97a295e478013a283]
+link SDK to Comm Channel--><g id="link_SDK_Comm Channel"><path d="M55.25,202.09 C66.09,233.45 88.25,297.54 98.95,328.49 " fill="none" id="SDK-Comm Channel" style="stroke:#181818;stroke-width:1.0;"/><path d="M109.2139,332.2856 A9,9 0 0 0 93.2214 337.7936" fill="none" style="stroke:#181818;stroke-width:1.5;"/><path d="M44.8638,197.9338 A9,9 0 0 0 60.8488 192.4043" fill="none" style="stroke:#181818;stroke-width:1.5;"/></g><!--MD5=[777c965fc5427bda85d941f434da154c]
+@startuml
+
+node POS {
+  component "POS Software" as main
+  SDK - [Integra API]
+
+  main .down.> SDK
+}
+
+node Terminal {
+  [Integra TE] as term
+  ()"Comm Channel"
+  term -up- ()"Comm Channel"
+ }
+
+POS -[hidden]down-Terminal
+SDK )-down-( ()"Comm Channel"
+
+@enduml
+
+PlantUML version 1.2022.6(Tue Jun 21 17:34:49 UTC 2022)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: ISO-8859-1
+Language: en
+Country: US
+--></g></svg>

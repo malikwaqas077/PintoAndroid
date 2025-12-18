@@ -1,0 +1,17 @@
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\bin\Debug\WpfApp1.exe.config
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\bin\Debug\WpfApp1.exe
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\bin\Debug\WpfApp1.pdb
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.csproj.AssemblyReference.cache
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\MainWindow.g.cs
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\App.g.cs
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1_MarkupCompile.cache
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1_MarkupCompile.lref
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\MainWindow.baml
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.g.resources
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.Properties.Resources.resources
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.csproj.GenerateResource.cache
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.csproj.CoreCompileInputs.cache
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.exe
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.pdb
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\bin\Debug\IntegraTE_ClientSDK_NET.dll
+D:\SST Controls\SST.GlobalPayCtrl\WpfApp1\obj\Debug\WpfApp1.csproj.Up2Date

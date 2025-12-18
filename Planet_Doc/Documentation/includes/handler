@@ -1,0 +1,63 @@
+<h1 id='handlers'>Handlers</h1><h2 id='handlers-istatusupdatehandler'>IStatusUpdateHandler</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">void</span> <span class="nf">onStatusUpdate</span><span class="p">(</span><span class="n">StatusUpdate</span> <span class="o">*</span><span class="n">statusUpdate</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">void</span> <span class="nf">onStatusUpdate</span><span class="o">(</span><span class="nc">StatusUpdate</span> <span class="n">statusUpdate</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="k">void</span> <span class="nf">onStatusUpdate</span><span class="p">(</span><span class="n">StatusUpdate</span> <span class="n">statusUpdate</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kd">func</span> <span class="nf">onStatusUpdate</span><span class="p">(</span><span class="nv">statusUpdate</span><span class="p">:</span> <span class="kt">PPStatusUpdate</span><span class="p">?)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="nf">onStatusUpdate</span><span class="p">:(</span><span class="n">nullable</span> <span class="n">PPStatusUpdate</span><span class="o">*</span><span class="p">)</span><span class="nv">statusUpdate</span><span class="p">;</span>
+</code></pre></div>
+<p>This interface contains a method to be called back on a Status update.</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>statusUpdate</td>
+<td><a href="#responses-statusupdate">StatusUpdate</a></td>
+<td>The status update received</td>
+</tr>
+</tbody></table>
+<h2 id='handlers-iresponsehandler'>IResponseHandler</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">void</span> <span class="nf">onResponse</span><span class="p">(</span><span class="n">Response</span> <span class="o">*</span><span class="n">response</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">void</span> <span class="nf">onResponse</span><span class="o">(</span><span class="nc">Response</span> <span class="n">response</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="k">void</span> <span class="nf">onResponse</span><span class="p">(</span><span class="n">Response</span> <span class="n">response</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kd">func</span> <span class="nf">onResponse</span><span class="p">(</span><span class="nv">response</span><span class="p">:</span> <span class="kt">PPResponse</span><span class="p">?)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="nf">onResponse</span><span class="p">:(</span><span class="n">nullable</span> <span class="n">PPResponse</span><span class="o">*</span><span class="p">)</span><span class="nv">response</span><span class="p">;</span>
+</code></pre></div>
+<p>This interface contains a method to be called back when a response to the request is received.</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>response</td>
+<td><a href="#responses-response">Response</a></td>
+<td>The response received</td>
+</tr>
+</tbody></table>
+<h2 id='handlers-ichannelstatuslistener'>IChannelStatusListener</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">void</span> <span class="nf">onChannelEvent</span><span class="p">(</span><span class="n">ChannelEventType</span> <span class="n">nEventType</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">void</span> <span class="nf">onChannelEvent</span><span class="o">(</span><span class="nc">ChannelEvent</span> <span class="n">nEventType</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="k">void</span> <span class="nf">onChannelEvent</span><span class="p">(</span><span class="n">ChannelEvent</span> <span class="n">nEventType</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kd">func</span> <span class="nf">onChannelEvent</span><span class="p">(</span><span class="nv">nEventType</span><span class="p">:</span> <span class="kt">PPChannelEvent</span><span class="p">?)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="nf">onChannelEvent</span><span class="p">:(</span><span class="n">nullable</span> <span class="n">PPChannelEvent</span><span class="o">*</span><span class="p">)</span><span class="nv">nEventType</span><span class="p">;</span>
+</code></pre></div>
+<p>This interface contains a method to be called back when the channel fires an event</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>eventType</td>
+<td><a href="#responses-channelevent">ChannelEvent</a></td>
+<td>The channel event received</td>
+</tr>
+</tbody></table>

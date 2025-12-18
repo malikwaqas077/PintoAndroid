@@ -1,0 +1,1081 @@
+<h1 id='channels'>Channels</h1>
+<p>Channels represent a method of connecting to a terminal and exchange raw data. For example, <a href="#channels-channelcomport">ChannelComPort</a> exchanges data over a serial port, <a href="#channels-channelsocketclient">ChannelSocketClient</a> exchanges data through a TCP connection.
+Channels can be instantiated directly or via the <a href="#channelfactory">ChannelFactory</a> singleton. </p>
+<h2 id='channels-ichannel'>IChannel</h2>
+<p>IChannel is a generic interface common to all channels</p>
+<h2 id='channels-channelsocketclient'>ChannelSocketClient</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClient</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">channelOptions</span><span class="p">;</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClient</span><span class="o">::</span><span class="n">CHANNEL_TYPE_VALUE</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span><span class="p">));</span>
+
+<span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClient</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">channelOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_CHANNEL</span><span class="o">,</span> <span class="nc">ChannelSocketClient</span><span class="o">.</span><span class="na">CHANNEL_TYPE_VALUE</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_IP</span><span class="o">,</span> <span class="n">host</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_PORT</span><span class="o">,</span> <span class="n">port</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_TIMEOUT</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="nc">IChannel</span> <span class="n">channnel</span> <span class="o">=</span> <span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannel</span><span class="o">(</span><span class="n">channelOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClient</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">// Via ChannelFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">channelOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClient</span><span class="p">.</span><span class="n">CHANNEL_TYPE_VALUE</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelSocketClient</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="k">var</span> <span class="nv">channelOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPChannelSocketClient</span><span class="o">.</span><span class="nf">channel_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_CHANNEL</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_IP</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_PORT</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_TIMEOUT</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClient</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">channelOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_CHANNEL</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPChannelSocketClient</span> <span class="nf">CHANNEL_TYPE_VALUE</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_IP</span><span class="p">]</span><span class="o">:</span> <span class="n">host</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_PORT</span><span class="p">]</span><span class="o">:</span> <span class="n">port</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_TIMEOUT</span><span class="p">]</span><span class="o">:</span> <span class="n">timeout</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannel</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This channel connects via a TCP/IP port to a terminal.
+There is no functional difference between KEY_HOST and KEY_IP; both will perform a DNS lookup if the supplied address is not an IPv4 address.
+In case both are present, KEY_HOST takes precedence</p>
+<h3 id='channels-channelsocketclient-constructor'>Constructor</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>host</td>
+<td>String</td>
+<td>The host/ip of the terminal</td>
+</tr>
+<tr>
+<td>port</td>
+<td>Integer</td>
+<td>The port of the requester service is listening on the terminal</td>
+</tr>
+<tr>
+<td>timeout</td>
+<td>Integer</td>
+<td>The maximum allowed timeout for this channel</td>
+</tr>
+</tbody></table>
+<h2 id='channels-channelsocketclientssl'>ChannelSocketClientSSL</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">channelOptions</span><span class="p">;</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClientSSL</span><span class="o">::</span><span class="n">CHANNEL_TYPE_VALUE</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span><span class="p">));</span>
+
+<span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientSSL</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">channelOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_CHANNEL</span><span class="o">,</span> <span class="nc">ChannelSocketClientSSL</span><span class="o">.</span><span class="na">CHANNEL_TYPE_VALUE</span><span class="o">));</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_IP</span><span class="o">,</span> <span class="n">host</span><span class="o">));</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_PORT</span><span class="o">,</span> <span class="n">port</span><span class="o">));</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_TIMEOUT</span><span class="o">,</span> <span class="n">timeout</span><span class="o">));</span>
+
+<span class="nc">IChannel</span> <span class="n">channnel</span> <span class="o">=</span> <span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannel</span><span class="o">(</span><span class="n">channelOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">// Via ChannelFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">channelOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClientSSL</span><span class="p">.</span><span class="n">CHANNEL_TYPE_VALUE</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientSSL</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="k">var</span> <span class="nv">channelOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPChannelSocketClientSSL</span><span class="o">.</span><span class="nf">channel_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_CHANNEL</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_IP</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_PORT</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_TIMEOUT</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientSSL</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">channelOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_CHANNEL</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPChannelSocketClientSSL</span> <span class="nf">CHANNEL_TYPE_VALUE</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_IP</span><span class="p">]</span><span class="o">:</span> <span class="n">host</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_PORT</span><span class="p">]</span><span class="o">:</span> <span class="n">port</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_TIMEOUT</span><span class="p">]</span><span class="o">:</span> <span class="n">timeout</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannel</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This channel connects via a SSL wrapped TCP/IP port.
+There is no functional difference between KEY_HOST and KEY_IP; both will perform a DNS lookup if the supplied address is not an IPv4 address.
+In case both are present, KEY_HOST takes precedence</p>
+<h3 id='channels-channelsocketclientssl-constructor'>Constructor</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>host</td>
+<td>String</td>
+<td>The host/ip of the terminal</td>
+</tr>
+<tr>
+<td>port</td>
+<td>Integer</td>
+<td>The port of the requester service is listening on the terminal</td>
+</tr>
+<tr>
+<td>timeout</td>
+<td>Integer</td>
+<td>The maximum allowed timeout for this channel</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclientssl-methods'>Methods</h3><h3 id='channels-channelsocketclientssl-setprotocols'>setProtocols</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientSSL</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setProtocols</span><span class="p">(</span><span class="n">protocolList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientSSL</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setProtocols</span><span class="o">(</span><span class="n">protocolList</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setProtocols</span><span class="p">(</span><span class="n">protocolList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientSSL</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientSSL</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setProtocols</span><span class="p">(</span><span class="nv">protocolList</span><span class="p">:</span> <span class="n">protocolList</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientSSL</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientSSL</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setProtocols</span><span class="p">:</span><span class="n">protocolList</span><span class="p">];</span>
+</code></pre></div>
+<p>Configures the protocol list allowed for this connection. 
+Known protocols are: SSLv3, TLSv1(.0), TLSv1.1, TLSv1.2, TLSv1.3
+Newer, more secure protocols take priority over older, less secure protocols</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>protocolList</td>
+<td>String</td>
+<td>A list (&#39;:&#39; separated) of the allowed SSL protocols</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclientssl-setciphers'>setCiphers</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientSSL</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setCiphers</span><span class="p">(</span><span class="n">cipherList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientSSL</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setCiphers</span><span class="o">(</span><span class="n">cipherList</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setCiphers</span><span class="p">(</span><span class="n">cipherList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientSSL</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientSSL</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setCiphers</span><span class="p">(</span><span class="nv">cipherList</span><span class="p">:</span> <span class="n">cipherList</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientSSL</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientSSL</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setCiphers</span><span class="p">:</span><span class="n">cipherList</span><span class="p">];</span>
+</code></pre></div>
+<p>Configures the cipher list allowed for this connection. Values are separated by the &#39;:&#39; character.
+You can set prebuilt cipher suites (&#39;HIGH&#39;, &#39;AES128:AES256:AES&#39;), or set any individual cipher (&#39;ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-GCM-SHA256&#39;)
+By default, the channel pre-selects ciphers know to work with H2H communication</p>
+
+<aside class="warning">
+    By default, this channel connects with the TLSv1.2 protocol spec. Not all ciphers are compatible with TLSv1.2
+</aside>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>cipherList</td>
+<td>String</td>
+<td>A list (&#39;:&#39; separated) of the allowed ciphers, or ciphersuites</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclientssl-setcertificate'>setCertificate</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientSSL</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setCertificate</span><span class="p">(</span><span class="n">certificateFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientSSL</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setCertificate</span><span class="o">(</span><span class="n">certificateFilePath</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setCertificate</span><span class="p">(</span><span class="n">certificateFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientSSL</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientSSL</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setCertificate</span><span class="p">(</span><span class="nv">certificate</span><span class="p">:</span> <span class="n">certificateFilePath</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientSSL</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientSSL</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setCertificate</span><span class="p">:</span><span class="n">certificateFilePath</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the path to a certificate file which contains public and private key information sent during SSL challenge
+File must be in PEM format</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>certificateFilePath</td>
+<td>String</td>
+<td>The path to a file containing public and private key information</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclientssl-setprivatekeypassword'>setPrivateKeyPassword</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientSSL</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setPrivateKeyPassword</span><span class="p">(</span><span class="n">password</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientSSL</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setPrivateKeyPassword</span><span class="o">(</span><span class="n">password</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setPrivateKeyPassword</span><span class="p">(</span><span class="n">password</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientSSL</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientSSL</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setPrivateKeyPassword</span><span class="p">(</span><span class="nv">password</span><span class="p">:</span> <span class="n">password</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientSSL</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientSSL</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setPrivateKeyPassword</span><span class="p">:</span><span class="n">password</span><span class="p">];</span>
+</code></pre></div>
+<p>If the supplied private key is password protected, this sets the password used to decrypt it</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>password</td>
+<td>String</td>
+<td>The private key&#39;s password</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclientssl-settruststore'>setTrustStore</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientSSL</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setTrustStore</span><span class="p">(</span><span class="n">CAFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientSSL</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setTrustStore</span><span class="o">(</span><span class="nc">CAFilePath</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientSSL</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientSSL</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setTrustStore</span><span class="p">(</span><span class="n">CAFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientSSL</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientSSL</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setTrustStore</span><span class="p">(</span><span class="nv">trustStore</span><span class="p">:</span> <span class="kt">CAFilePath</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientSSL</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientSSL</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setTrustStore</span><span class="p">:</span><span class="n">CAFilePath</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the path to a chain of trust file which authenticates the certificates used during SSL challenge.
+File myst be in PEM format</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>CAFilePath</td>
+<td>String</td>
+<td>The path to a file containing the chain of trust for the certificates used</td>
+</tr>
+</tbody></table>
+<h2 id='channels-channelsocketclienthttp'>ChannelSocketClientHTTP</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTP</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">channelOptions</span><span class="p">;</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClientHTTP</span><span class="o">::</span><span class="n">CHANNEL_TYPE_VALUE</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span><span class="p">));</span>
+
+<span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTP</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">channelOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_CHANNEL</span><span class="o">,</span> <span class="nc">ChannelSocketClientHTTP</span><span class="o">.</span><span class="na">CHANNEL_TYPE_VALUE</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_IP</span><span class="o">,</span> <span class="n">host</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_PORT</span><span class="o">,</span> <span class="n">port</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_TIMEOUT</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="nc">IChannel</span> <span class="n">channnel</span> <span class="o">=</span> <span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannel</span><span class="o">(</span><span class="n">channelOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTP</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">// Via ChannelFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">channelOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClientHTTP</span><span class="p">.</span><span class="n">CHANNEL_TYPE_VALUE</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTP</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="k">var</span> <span class="nv">channelOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPChannelSocketClientHTTP</span><span class="o">.</span><span class="nf">channel_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_CHANNEL</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_IP</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_PORT</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_TIMEOUT</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTP</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">channelOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_CHANNEL</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPChannelSocketClientHTTP</span> <span class="nf">CHANNEL_TYPE_VALUE</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_IP</span><span class="p">]</span><span class="o">:</span> <span class="n">host</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_PORT</span><span class="p">]</span><span class="o">:</span> <span class="n">port</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_TIMEOUT</span><span class="p">]</span><span class="o">:</span> <span class="n">timeout</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannel</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This channel uses the HTTP protocol and connects via a TCP/IP port to a terminal.
+There is no functional difference between KEY_HOST and KEY_IP; both will perform a DNS lookup if the supplied address is not an IPv4 address.
+In case both are present, KEY_HOST takes precedence</p>
+<h3 id='channels-channelsocketclienthttp-constructor'>Constructor</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>host</td>
+<td>String</td>
+<td>The host/ip of the terminal</td>
+</tr>
+<tr>
+<td>port</td>
+<td>Integer</td>
+<td>The port of the HTTP requester service running on the terminal</td>
+</tr>
+<tr>
+<td>timeout</td>
+<td>Integer</td>
+<td>The maximum allowed timeout for this channel</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttp-methods'>Methods</h3><h3 id='channels-channelsocketclienthttp-sethttpheadermethod'>setHTTPHeaderMethod</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTP</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTP</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setHTTPHeaderMethod</span><span class="p">(</span><span class="n">HTTPMethod</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTP</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTP</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setHTTPHeaderMethod</span><span class="o">(</span><span class="nc">HTTPMethod</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTP</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTP</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setHTTPHeaderMethod</span><span class="p">(</span><span class="n">HTTPMethod</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTP</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTP</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">headerMethod</span> <span class="o">=</span> <span class="kt">HTTPMethod</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTP</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTP</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setHeaderMethod</span><span class="p">:</span><span class="n">HTTPMethod</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the HTTP header method for requests made using this channel.
+Defaults to POST.</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>HTTPMethod</td>
+<td>String</td>
+<td>The HTTP method to use, ex: POST, GET</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttp-gethttpheadermethod'>getHTTPHeaderMethod</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTP</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTP</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">getHTTPHeaderMethod</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTP</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTP</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">getHTTPHeaderMethod</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTP</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTP</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">getHTTPHeaderMethod</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTP</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTP</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">headerMethod</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTP</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTP</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">getHeaderMethod</span><span class="p">];</span>
+</code></pre></div>
+<p>Returns the current HTTP header method set for this channel</p>
+<h2 id='channels-channelsocketclienthttps'>ChannelSocketClientHTTPS</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">channelOptions</span><span class="p">;</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClientHTTPS</span><span class="o">::</span><span class="n">CHANNEL_TYPE_VALUE</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span><span class="p">));</span>
+
+<span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">channelOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_CHANNEL</span><span class="o">,</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">.</span><span class="na">CHANNEL_TYPE_VALUE</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_IP</span><span class="o">,</span> <span class="n">host</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_PORT</span><span class="o">,</span> <span class="n">port</span><span class="o">);</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_TIMEOUT</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="nc">IChannel</span> <span class="n">channnel</span> <span class="o">=</span> <span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannel</span><span class="o">(</span><span class="n">channelOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">// Via ChannelFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">channelOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketClientHTTPS</span><span class="p">.</span><span class="n">CHANNEL_TYPE_VALUE</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_HOST</span><span class="p">,</span> <span class="n">host</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span> <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="k">var</span> <span class="nv">channelOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">channel_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_CHANNEL</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_IP</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_PORT</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_TIMEOUT</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">channelOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_CHANNEL</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">CHANNEL_TYPE_VALUE</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_IP</span><span class="p">]</span><span class="o">:</span> <span class="n">host</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_PORT</span><span class="p">]</span><span class="o">:</span> <span class="n">port</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_TIMEOUT</span><span class="p">]</span><span class="o">:</span> <span class="n">timeout</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannel</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This channel uses the HTTP protocol and connects via a SSL wrapped TCP/IP port to a terminal.
+There is no functional difference between KEY_HOST and KEY_IP; both will perform a DNS lookup if the supplied address is not an IPv4 address.
+In case both are present, KEY_HOST takes precedence</p>
+<h3 id='channels-channelsocketclienthttps-constructor'>Constructor</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>host</td>
+<td>String</td>
+<td>The host/ip of the terminal</td>
+</tr>
+<tr>
+<td>port</td>
+<td>Integer</td>
+<td>The port of the HTTP requester service running on the terminal</td>
+</tr>
+<tr>
+<td>timeout</td>
+<td>Integer</td>
+<td>The maximum allowed timeout for this channel</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttps-methods'>Methods</h3><h3 id='channels-channelsocketclienthttps-sethttpheadermethod'>setHTTPHeaderMethod</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setHTTPHeaderMethod</span><span class="p">(</span><span class="n">HTTPMethod</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setHTTPHeaderMethod</span><span class="o">(</span><span class="nc">HTTPMethod</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setHTTPHeaderMethod</span><span class="p">(</span><span class="n">HTTPMethod</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTPS</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">headerMethod</span> <span class="o">=</span> <span class="kt">HTTPMethod</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTPS</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setHeaderMethod</span><span class="p">:</span><span class="n">HTTPMethod</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the HTTP header method for requests made using this channel.
+Defaults to POST.</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>HTTPMethod</td>
+<td>String</td>
+<td>The HTTP method to use, ex: POST, GET</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttps-gethttpheadermethod'>getHTTPHeaderMethod</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">getHTTPHeaderMethod</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">getHTTPHeaderMethod</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">getHTTPHeaderMethod</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTPS</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">headerMethod</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTPS</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">getHeaderMethod</span><span class="p">];</span>
+</code></pre></div>
+<p>Returns the current HTTP header method set for this channel
+Defaults to POST.</p>
+<h3 id='channels-channelsocketclienthttps-setprotocols'>setProtocols</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setProtocols</span><span class="p">(</span><span class="n">protocolList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setProtocols</span><span class="o">(</span><span class="n">protocolList</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setProtocols</span><span class="p">(</span><span class="n">protocolList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTPS</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setProtocols</span><span class="p">(</span><span class="nv">protocolList</span><span class="p">:</span> <span class="n">protocolList</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTPS</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setProtocols</span><span class="p">:</span><span class="n">protocolList</span><span class="p">];</span>
+</code></pre></div>
+<p>Configures the protocol list allowed for this connection. 
+Known protocols are: SSLv3, TLSv1(.0), TLSv1.1, TLSv1.2, TLSv1.3
+Newer, more secure protocols take priority over older, less secure protocols</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>protocolList</td>
+<td>String</td>
+<td>A list (&#39;:&#39; separated) of the allowed SSL protocols</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttps-setciphers'>setCiphers</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setCiphers</span><span class="p">(</span><span class="n">cipherList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setCiphers</span><span class="o">(</span><span class="n">cipherList</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setCiphers</span><span class="p">(</span><span class="n">cipherList</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTPS</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setCiphers</span><span class="p">(</span><span class="nv">cipherList</span><span class="p">:</span> <span class="n">cipherList</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTPS</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setCiphers</span><span class="p">:</span><span class="n">cipherList</span><span class="p">];</span>
+</code></pre></div>
+<p>Configures the cipher list allowed for this connection. Values are separated by the &#39;:&#39; character.
+You can set prebuilt cipher suites (&#39;HIGH&#39;, &#39;AES128:AES256:AES&#39;), or set any individual cipher (&#39;ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-GCM-SHA256&#39;)
+By default, the channel pre-selects ciphers know to work with H2H communication</p>
+
+<aside class="warning">
+    By default, this channel connects with the TLSv1.2 protocol spec. Not all ciphers are compatible with TLSv1.2
+</aside>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>cipherList</td>
+<td>String</td>
+<td>A list (&#39;:&#39; separated) of the allowed ciphers, or ciphersuites</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttps-setcertificate'>setCertificate</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setCertificate</span><span class="p">(</span><span class="n">certificateFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setCertificate</span><span class="o">(</span><span class="n">certificateFilePath</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setCertificate</span><span class="p">(</span><span class="n">certificateFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTPS</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setCertificate</span><span class="p">(</span><span class="nv">certificate</span><span class="p">:</span> <span class="n">certificateFilePath</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTPS</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setCertificate</span><span class="p">:</span><span class="n">certificateFilePath</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the path to a certificate file which contains public and private key information sent during SSL challenge
+File must be in PEM format</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>certificateFilePath</td>
+<td>String</td>
+<td>The path to a file containing public and private key information</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttps-setprivatekeypassword'>setPrivateKeyPassword</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setPrivateKeyPassword</span><span class="p">(</span><span class="n">password</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setPrivateKeyPassword</span><span class="o">(</span><span class="n">password</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setPrivateKeyPassword</span><span class="p">(</span><span class="n">password</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTPS</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setPrivateKeyPassword</span><span class="p">(</span><span class="nv">password</span><span class="p">:</span> <span class="n">password</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTPS</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setPrivateKeyPassword</span><span class="p">:</span><span class="n">password</span><span class="p">];</span>
+</code></pre></div>
+<p>If the supplied private key is password protected, this sets the password used to decrypt it</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>password</td>
+<td>String</td>
+<td>The private key&#39;s password</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketclienthttps-settruststore'>setTrustStore</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="o">-&gt;</span><span class="n">setTrustStore</span><span class="p">(</span><span class="n">CAFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketClientHTTPS</span><span class="o">(</span><span class="n">host</span><span class="o">,</span> <span class="n">port</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+<span class="n">channel</span><span class="o">.</span><span class="na">setTrustStore</span><span class="o">(</span><span class="nc">CAFilePath</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelSocketClientHTTPS</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketClientHTTPS</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+<span class="n">channel</span><span class="p">.</span><span class="nf">setTrustStore</span><span class="p">(</span><span class="n">CAFilePath</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPChannelSocketClientHTTPS</span> <span class="o">=</span> <span class="kt">PPChannelSocketClientHTTPS</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">host</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span> <span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">timeout</span><span class="p">:</span> <span class="n">timeout</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="nf">setTrustStore</span><span class="p">(</span><span class="nv">trustStore</span><span class="p">:</span> <span class="kt">CAFilePath</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelSocketClientHTTPS</span><span class="o">*</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketClientHTTPS</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithHost</span><span class="p">:</span><span class="n">host</span> <span class="nf">port</span><span class="p">:</span><span class="n">port</span> <span class="n">timeout</span><span class="o">:</span><span class="n">timeout</span><span class="p">];</span>
+<span class="p">[</span><span class="n">channel</span> <span class="nf">setTrustStore</span><span class="p">:</span><span class="n">CAFilePath</span><span class="p">];</span>
+</code></pre></div>
+<p>Sets the path to a chain of trust file which authenticates the certificates used during SSL challenge.
+File myst be in PEM format</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>CAFilePath</td>
+<td>String</td>
+<td>The path to a file containing the chain of trust for the certificates used</td>
+</tr>
+</tbody></table>
+<h2 id='channels-channelcomport'>ChannelComPort</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelComPort</span><span class="p">(</span><span class="n">comport</span><span class="p">,</span> <span class="n">baudrate</span><span class="p">,</span> <span class="n">databits</span><span class="p">,</span> <span class="n">stopbits</span><span class="p">,</span> <span class="n">parity</span><span class="p">,</span> <span class="n">flowcontrol</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">channelOptions</span><span class="p">;</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelComPort</span><span class="o">::</span><span class="n">CHANNEL_TYPE_VALUE</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_COMPORT</span><span class="p">,</span> <span class="n">comport</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_BAUD_RATE</span><span class="p">,</span> <span class="n">baudrate</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_DATA_BITS</span><span class="p">,</span> <span class="n">databits</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_STOP_BITS</span><span class="p">,</span> <span class="n">stopbits</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_PARITY</span><span class="p">,</span> <span class="n">parity</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_FLOW_CONTROL</span><span class="p">,</span> <span class="n">flowcontrol</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span><span class="p">));</span>
+
+<span class="n">IChannel</span> <span class="o">*</span><span class="n">myChannel</span> <span class="o">=</span> <span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelComPort</span><span class="o">(</span><span class="n">comport</span><span class="o">,</span> <span class="n">baudrate</span><span class="o">,</span> <span class="n">databits</span><span class="o">,</span> <span class="n">stopbits</span><span class="o">,</span> <span class="n">parity</span><span class="o">,</span> <span class="n">flowcontrol</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">myChannelOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_CHANNEL</span><span class="o">,</span> <span class="nc">ChannelComPort</span><span class="o">.</span><span class="na">CHANNEL_TYPE_VALUE</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_COMPORT</span><span class="o">,</span> <span class="n">comport</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_BAUD_RATE</span><span class="o">,</span> <span class="n">baudrate</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_DATA_BITS</span><span class="o">,</span> <span class="n">databits</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_STOP_BITS</span><span class="o">,</span> <span class="n">stopbits</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_PARITY</span><span class="o">,</span> <span class="n">parity</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_FLOW_CONTROL</span><span class="o">,</span> <span class="n">flowcontrol</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_TIMEOUT</span><span class="o">,</span> <span class="n">timeout</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelComPort</span><span class="p">(</span><span class="n">comport</span><span class="p">,</span> <span class="n">baudrate</span><span class="p">,</span> <span class="n">databits</span><span class="p">,</span> <span class="n">stopbits</span><span class="p">,</span> <span class="n">parity</span><span class="p">,</span> <span class="n">flowcontrol</span><span class="p">,</span> <span class="n">timeout</span><span class="p">;</span>
+
+<span class="c1">// Via ChannelFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">channelOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelComPort</span><span class="p">.</span><span class="n">CHANNEL_TYPE_VALUE</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_COMPORT</span><span class="p">,</span> <span class="n">comport</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_BAUD_RATE</span><span class="p">,</span> <span class="n">baudrate</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_DATA_BITS</span><span class="p">,</span> <span class="n">databits</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_STOP_BITS</span><span class="p">,</span> <span class="n">stopbits</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_PARITY</span><span class="p">,</span> <span class="n">parity</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_FLOW_CONTROL</span><span class="p">,</span> <span class="n">flowcontrol</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_TIMEOUT</span><span class="p">,</span> <span class="n">timeout</span> <span class="p">},</span>
+<span class="p">};</span>
+
+<span class="n">IChannel</span> <span class="n">myChannel</span> <span class="p">=</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="c1">//ChannelComPort is not available in Swift</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="c1">//ChannelComPort is not available in Objective-C</span>
+</code></pre></div>
+<p>This channel connects via a serial port to a terminal</p>
+<h3 id='channels-channelcomport-constructor'>Constructor</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>comport</td>
+<td>String</td>
+<td>The name of the comport adapter to use</td>
+</tr>
+<tr>
+<td>baudrate</td>
+<td>Integer</td>
+<td>The speed of the comport adapter</td>
+</tr>
+<tr>
+<td>databits</td>
+<td>Integer</td>
+<td>The dabits of the comport adapter</td>
+</tr>
+<tr>
+<td>stopbits</td>
+<td>Integer</td>
+<td>The stopbits of the comport adapter</td>
+</tr>
+<tr>
+<td>parity</td>
+<td>String</td>
+<td>The parity of the comport adapter. (N)one, (O)dd, (E)ven, (M)ark, (S)pace</td>
+</tr>
+<tr>
+<td>flowcontrol</td>
+<td>Integer</td>
+<td>The flowcontrol of the comport adapter. 0 disables, 1 for software flowcontrol, 2 for hardware flowcontrol</td>
+</tr>
+<tr>
+<td>timeout</td>
+<td>Integer</td>
+<td>The maximum allowed timeout for this channel</td>
+</tr>
+</tbody></table>
+
+<p>Baudrate, databits, stopbits, parity and flowcontrol must match terminal configuration</p>
+<h2 id='channels-channelsocketserver'>ChannelSocketServer</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">IChannel</span> <span class="o">*</span><span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ChannelSocketServer</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">maxClients</span><span class="p">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">channelOptions</span><span class="p">;</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketServer</span><span class="o">::</span><span class="n">CHANNEL_TYPE_VALUE</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span><span class="p">));</span>
+<span class="n">channelOptions</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">KEY_MAX_CLIENTS</span><span class="p">,</span> <span class="n">maxClients</span><span class="p">));</span>
+
+<span class="n">IChannel</span> <span class="o">*</span><span class="n">myChannel</span> <span class="o">=</span> <span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">IChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ChannelSocketServer</span><span class="o">(</span><span class="n">port</span><span class="o">,</span> <span class="n">maxClients</span><span class="o">);</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">myChannelOptions</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;();</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_CHANNEL</span><span class="o">,</span> <span class="nc">ChannelSocketServer</span><span class="o">.</span><span class="na">CHANNEL_TYPE_VALUE</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_PORT</span><span class="o">,</span> <span class="n">port</span><span class="o">);</span>
+<span class="n">myChannelOptions</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">KEY_MAX_CLIENTS</span><span class="o">,</span> <span class="n">maxClients</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">IChannel</span> <span class="n">channel</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">ChannelSocketServer</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">maxClients</span><span class="p">);</span>
+
+<span class="c1">// Via ChannelFactory</span>
+<span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">channelOptions</span> <span class="p">=</span> <span class="k">new</span> <span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span>
+<span class="p">{</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_CHANNEL</span><span class="p">,</span> <span class="n">ChannelSocketServer</span><span class="p">.</span><span class="n">CHANNEL_TYPE_VALUE</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_PORT</span><span class="p">,</span> <span class="n">port</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="n">KEY_MAX_CLIENTS</span><span class="p">,</span> <span class="n">maxClients</span> <span class="p">},</span>
+<span class="p">};</span>
+
+<span class="n">IChannel</span> <span class="n">myChannel</span> <span class="p">=</span> <span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelSocketServer</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">port</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="nv">maxClients</span><span class="p">:</span> <span class="n">maxClients</span><span class="p">)</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="k">var</span> <span class="nv">channelOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="p">[</span><span class="kt">String</span><span class="p">:</span> <span class="kt">String</span><span class="p">]()</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="kt">PPChannelSocketServer</span><span class="o">.</span><span class="nf">channel_TYPE_VALUE</span><span class="p">(),</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_CHANNEL</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_PORT</span><span class="p">())</span>
+<span class="n">channelOptions</span><span class="o">.</span><span class="nf">updateValue</span><span class="p">(</span><span class="n">maxClients</span><span class="p">,</span> <span class="nv">forKey</span><span class="p">:</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">key_MAX_CLIENTS</span><span class="p">())</span>
+
+<span class="k">let</span> <span class="nv">channel</span><span class="p">:</span><span class="kt">PPIChannel</span> <span class="o">=</span> <span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPChannelSocketServer</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithPort</span><span class="p">:</span><span class="n">port</span> <span class="nf">maxClients</span><span class="p">:</span><span class="n">maxClients</span><span class="p">];</span>
+
+<span class="c1">//Via ChannelFactory</span>
+<span class="n">NSDictionary</span> <span class="o">*</span><span class="n">channelOptions</span> <span class="o">=</span> <span class="p">@{</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_CHANNEL</span><span class="p">]</span><span class="o">:</span> <span class="p">[</span><span class="n">PPChannelSocketServer</span> <span class="nf">CHANNEL_TYPE_VALUE</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_PORT</span><span class="p">]</span><span class="o">:</span> <span class="n">port</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">KEY_MAX_CLIENTS</span><span class="p">]</span><span class="o">:</span> <span class="n">maxClients</span>
+<span class="p">};</span>
+
+<span class="n">id</span><span class="o">&lt;</span><span class="n">PPIChannel</span><span class="o">&gt;</span> <span class="n">channel</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannel</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>This channel binds to a local port and waits for client connections to it</p>
+<h3 id='channels-channelsocketserver-constructor'>Constructor</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>port</td>
+<td>Integer</td>
+<td>The port this server should bind to</td>
+</tr>
+<tr>
+<td>maxClients</td>
+<td>Integer</td>
+<td>The maximum number of clients allowed to be connected at once to this server</td>
+</tr>
+</tbody></table>
+<h3 id='channels-channelsocketserver-special-considerations'>Special considerations</h3>
+<p>Since a server may have multiple endpoints connected to it, all server callbacks will have a key associated with it: KEY_CLIENT_ID.
+This key identifies the client that raised said event or message and is unique among all connected clients.</p>
+
+<p>Likewise, to send a request add KEY_CLIENT_ID with the corresponding client ID you wish to send the message to.</p>
+<h1 id='channelfactory'>ChannelFactory</h1>
+<p>The channel factory allows you obtain IChannel instances using a set of options. <a href="#channelfactory-options">ChannelFactory KEY_CHANNEL</a> is required. Other options may be required depending on which type of channel is selected.</p>
+<h2 id='channelfactory-channeltype'>ChannelType</h2>
+<p>The following channels are currently implemented:</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>CHANNEL_CLIENT_SOCKET</td>
+<td>This channel connects via a TCP/IP port</td>
+</tr>
+<tr>
+<td>CHANNEL_CLIENT_SOCKET_SSL</td>
+<td>This channel connects via a TCP/IP port wrapped by SSL encryption</td>
+</tr>
+<tr>
+<td>CHANNEL_COMPORT</td>
+<td>This channel connects via a serial port to a terminal</td>
+</tr>
+</tbody></table>
+<h2 id='channelfactory-options'>Options</h2>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>KEY_CHANNEL</td>
+<td>The channel name to use</td>
+</tr>
+<tr>
+<td>KEY_HOST</td>
+<td>Channel Host key. May be used in lieu of KEY_IP. Required for ChannelClientSocket</td>
+</tr>
+<tr>
+<td>KEY_IP</td>
+<td>Channel IP key. May be used in lieu of KEY_HOST. Required for ChannelClientSocket</td>
+</tr>
+<tr>
+<td>KEY_PORT</td>
+<td>Channel port key. Required for ChannelClientSocket</td>
+</tr>
+<tr>
+<td>KEY_TIMEOUT</td>
+<td>Channel timeout key</td>
+</tr>
+<tr>
+<td>KEY_CIPHERS</td>
+<td>Channel ciphers key. Required for ChannelClientSocketSSL</td>
+</tr>
+<tr>
+<td>KEY_PROTOCOLS</td>
+<td>Channel protocols key. Required for ChannelClientSocketSSL</td>
+</tr>
+<tr>
+<td>KEY_KEYSTORE</td>
+<td>Channel keystore key. Path to a file containing public and private key information in PEM format. Optional for ChannelClientSocketSSL</td>
+</tr>
+<tr>
+<td>KEY_PASSWORD</td>
+<td>Channel private key password key. The password to decrypt the supplied private key, if applicable. Optional for ChannelClientSocketSSL</td>
+</tr>
+<tr>
+<td>KEY_CA</td>
+<td>Channel Certificate Authority key. Path to a file containing the relevant chain of trust to the host you are connecting in PEM format. Optional for ChannelClientSocketSSL</td>
+</tr>
+<tr>
+<td>KEY_COMPORT</td>
+<td>Channel comport adapter key. Required for ChannelComPort</td>
+</tr>
+<tr>
+<td>KEY_BAUD_RATE</td>
+<td>Channel baudrate key. Required for ChannelComPort</td>
+</tr>
+<tr>
+<td>KEY_DATA_BITS</td>
+<td>Channel databits key. Required for ChannelComPort</td>
+</tr>
+<tr>
+<td>KEY_STOP_BITS</td>
+<td>Channel stopbits key. Required for ChannelComPort</td>
+</tr>
+<tr>
+<td>KEY_PARITY</td>
+<td>Channel parity key. Required for ChannelComPort</td>
+</tr>
+<tr>
+<td>KEY_FLOW_CONTROL</td>
+<td>Channel flowcontrol key. Required for ChannelComPort</td>
+</tr>
+</tbody></table>
+<h2 id='channelfactory-methods'>Methods</h2><h3 id='channelfactory-methods-getchannel'>getChannel</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannel</span><span class="o">(</span><span class="n">channelOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannel</span><span class="p">(</span><span class="nv">options</span><span class="p">:</span> <span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannel</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>Retrieves an IChannel with the requested options</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channelOptions</td>
+<td>Map</td>
+<td>An option map containing which channel is being requested, as well as any options for this channel</td>
+</tr>
+</tbody></table>
+<h3 id='channelfactory-methods-getchannellist'>getChannelList</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannelList</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannel</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannelList</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannelList</span><span class="p">()</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannelList</span><span class="p">];</span>
+</code></pre></div>
+<p>Retrieves a list of all supported channels</p>
+<h3 id='channelfactory-methods-getoptionsforchannel'>getOptionsForChannel</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getOptionsForChannel</span><span class="p">(</span><span class="n">channelName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getOptionsForChannel</span><span class="o">(</span><span class="n">channelName</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getOptionsForChannel</span><span class="p">(</span><span class="n">channelName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getOptionsForChannel</span><span class="p">(</span><span class="nv">channel</span><span class="p">:</span> <span class="n">channelName</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getOptionsForChannel</span><span class="p">:</span><span class="n">channelName</span><span class="p">];</span>
+</code></pre></div>
+<p>Retrives a list of all the required and optional options for a channel</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channelName</td>
+<td>String</td>
+<td>The channel name being requested</td>
+</tr>
+</tbody></table>
+<h3 id='channelfactory-methods-validateoptions'>validateOptions</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">validateOptions</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">validateOptions</span><span class="o">(</span><span class="n">channelOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">validateOptions</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">validateOptions</span><span class="p">(</span><span class="nv">options</span><span class="p">:</span> <span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">validateOptions</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>Checks if a set of channelOptions are correct and contain all required information. <a href="#errors-errortype">ErrorType SUCCESS</a> will be returned if the validate check passes</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channelOptions</td>
+<td>Map</td>
+<td>An option map containing which channel is being requested, as well as any options for this channel</td>
+</tr>
+</tbody></table>
+<h3 id='channelfactory-methods-getchanneltype'>getChannelType</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannelType</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannelType</span><span class="o">(</span><span class="n">channelOptions</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannelType</span><span class="p">(</span><span class="n">channelOptions</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannelType</span><span class="p">(</span><span class="nv">options</span><span class="p">:</span> <span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannelType</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>Extracts the ChannelType from a set of options</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channelOptions</td>
+<td>Map</td>
+<td>An option map containing which channel is being requested, as well as any options for this channel</td>
+</tr>
+</tbody></table>
+<h3 id='channelfactory-methods-getchanneltype'>getChannelType</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannelType</span><span class="p">(</span><span class="n">channelName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannelType</span><span class="o">(</span><span class="n">channelName</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannelType</span><span class="p">(</span><span class="n">channelName</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannelType</span><span class="p">(</span><span class="nv">channel</span><span class="p">:</span> <span class="n">channelOptions</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannelType</span><span class="p">:</span><span class="n">channelOptions</span><span class="p">];</span>
+</code></pre></div>
+<p>Converts a channelName into a ChannelType</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channelName</td>
+<td>String</td>
+<td>The channel name to convert into a ChannelType</td>
+</tr>
+</tbody></table>
+<h3 id='channelfactory-methods-getchannelname'>getChannelName</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelFactory</span><span class="o">::</span><span class="n">getChannelName</span><span class="p">(</span><span class="n">channelType</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ChannelFactory</span><span class="o">.</span><span class="na">getChannelName</span><span class="o">(</span><span class="n">channelType</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelFactory</span><span class="p">.</span><span class="nf">getChannelName</span><span class="p">(</span><span class="n">channelType</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPChannelFactory</span><span class="o">.</span><span class="nf">getChannelType</span><span class="p">(</span><span class="nv">channelType</span><span class="p">:</span> <span class="n">channelType</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPChannelFactory</span> <span class="nf">getChannelType</span><span class="p">:</span><span class="n">channelType</span><span class="p">];</span>
+</code></pre></div>
+<p>Converts a ChannelType into a request name</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channelType</td>
+<td>ChannelType</td>
+<td>The channel&#39;s type</td>
+</tr>
+</tbody></table>

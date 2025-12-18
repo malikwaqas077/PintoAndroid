@@ -1,0 +1,156 @@
+<h1 id='integra'>Integra</h1>
+<p>Integra manages the communication to the terminal. Terminal requests are sent through Integra, terminal messages are parsed and the appropriate callbacks are flagged</p>
+<h2 id='integra-methods'>Methods</h2><h3 id='integra-methods-constructor'>Constructor</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Integra</span> <span class="o">*</span><span class="n">integra</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Integra</span><span class="p">(</span><span class="n">communicationContext</span><span class="p">,</span> <span class="n">statusUpdateHandler</span><span class="p">,</span> <span class="n">responseHandler</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Integra</span> <span class="n">integra</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Integra</span><span class="o">(</span><span class="n">communicationContext</span><span class="o">,</span> <span class="n">statusUpdateHandler</span><span class="o">,</span> <span class="n">responseHandler</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Integra</span> <span class="n">integra</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">Integra</span><span class="p">(</span><span class="n">communicationContext</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">integra</span><span class="p">:</span><span class="kt">PPIntegra</span> <span class="o">=</span> <span class="kt">PPIntegra</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">communicationContext</span><span class="p">:</span> <span class="n">communicationContext</span><span class="p">,</span> <span class="nv">with</span><span class="p">:</span> <span class="n">statusUpdateHandler</span><span class="p">,</span> <span class="nv">andResponseHandler</span><span class="p">:</span> <span class="n">responseHandler</span><span class="p">,</span> <span class="nv">andChannelStatusListener</span><span class="p">:</span> <span class="n">channelStatusListener</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPIntegra</span> <span class="o">*</span><span class="n">integra</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPIntegra</span> <span class="nf">alloc</span><span class="p">]</span> <span class="n">initWithCommunicationContext</span><span class="o">:</span><span class="n">communicationContext</span> <span class="n">withStatusUpdateHandler</span><span class="o">:</span><span class="n">statusUpdateHandler</span> <span class="n">andResponseHandler</span><span class="o">:</span><span class="n">responseHandler</span> <span class="n">andChannelStatusListener</span><span class="o">:</span><span class="n">channelStatusListener</span><span class="p">];</span>
+</code></pre></div>
+<p>Creates an instance of Integra. Integra requires a <a href="#communicationcontext">CommunicationContext</a>. Optionally, it can also receive a <a href="#handlers-istatusupdatehandler">IStatusUpdateHandler</a> and a <a href="#handlers-iresponsehandler">IResponseHandler</a> for status and responses callbacks. These can be later using the corresponding setter if not set in the constructor</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>communicationContext</td>
+<td><a href="#communicationcontext">CommunicationContext</a></td>
+<td>An instance of a CommunicationContext to send/receive data from the terminal</td>
+</tr>
+<tr>
+<td>statusUpdateHandler</td>
+<td><a href="#handlers-istatusupdatehandler">IStatusUpdateHandler</a></td>
+<td>The callback for terminal status messages</td>
+</tr>
+<tr>
+<td>responseHandler</td>
+<td><a href="#handlers-iresponsehandler">IResponseHandler</a></td>
+<td>The callback for terminal response messages</td>
+</tr>
+</tbody></table>
+<h3 id='integra-methods-enableautoreconnect'>enableAutoReconnect</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">integra</span><span class="o">-&gt;</span><span class="n">enableAutoReconnect</span><span class="p">(</span><span class="n">enable</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">integra</span><span class="o">.</span><span class="na">enableAutoReconnect</span><span class="o">(</span><span class="n">enable</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">integra</span><span class="p">.</span><span class="n">AutoReconnect</span> <span class="p">=</span> <span class="n">enable</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">integra</span><span class="o">.</span><span class="n">isAutoReconnectEnabled</span> <span class="o">=</span> <span class="n">enable</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">integra</span> <span class="nf">enableAutoReconnect</span><span class="p">:</span><span class="n">enable</span><span class="p">];</span>
+</code></pre></div>
+<p>Enables or disables the auto reconnect feature. If this feature is enabled, when the connection to the terminal has been interrupted the SDK will automatically attempt to re-establish the connection</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>enable</td>
+<td>Boolean</td>
+<td>Enable/Disable flag</td>
+</tr>
+</tbody></table>
+<h3 id='integra-methods-isautoreconnectenabled'>isAutoReconnectEnabled</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">integra</span><span class="o">-&gt;</span><span class="n">isAutoReconnectEnabled</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">integra</span><span class="o">.</span><span class="na">isAutoReconnectEnabled</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">integra</span><span class="p">.</span><span class="n">AutoReconnect</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">integra</span><span class="o">.</span><span class="n">isAutoReconnectEnabled</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">integra</span><span class="p">.</span><span class="n">isAutoReconnectEnabled</span><span class="p">;</span>
+</code></pre></div>
+<p>Checks if the auto reconnect feature is enabled or disabled</p>
+<h3 id='integra-methods-setstatusupdatehandler'>setStatusUpdateHandler</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">integra</span><span class="o">-&gt;</span><span class="n">setStatusUpdateHandler</span><span class="p">(</span><span class="n">statusUpdateHandler</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">integra</span><span class="o">.</span><span class="na">setStatusUpdateHandler</span><span class="o">(</span><span class="n">statusUpdateHandler</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">integra</span><span class="p">.</span><span class="n">statusUpdateHandler</span> <span class="p">+=</span> <span class="n">statusHandler</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">integra</span><span class="o">.</span><span class="n">statusHandler</span> <span class="o">=</span> <span class="n">statusUpdateHandler</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">integra</span> <span class="nf">setStatusHandler</span><span class="p">:</span><span class="n">statusUpdateHandler</span><span class="p">];</span>
+</code></pre></div>
+<p>Attaches or overrides the current terminal status listener</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>statusUpdateHandler</td>
+<td><a href="#handlers-istatusupdatehandler">IStatusUpdateHandler</a></td>
+<td>The callback for terminal status messages</td>
+</tr>
+</tbody></table>
+<h3 id='integra-methods-setresponsehandler'>setResponseHandler</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">integra</span><span class="o">-&gt;</span><span class="n">setResponseHandler</span><span class="p">(</span><span class="n">responseHandler</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">integra</span><span class="o">.</span><span class="na">setResponseHandler</span><span class="o">(</span><span class="n">responseHandler</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">integra</span><span class="p">.</span><span class="n">responseUpdateHandler</span> <span class="p">+=</span> <span class="n">responseHandler</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">integra</span><span class="o">.</span><span class="n">responseHandler</span> <span class="o">=</span> <span class="n">responseHandler</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">integra</span> <span class="nf">setResponseHandler</span><span class="p">:</span><span class="n">responseHandler</span><span class="p">];</span>
+</code></pre></div>
+<p>Attaches or overrides the current terminal response message listener</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>responseHandler</td>
+<td><a href="#handlers-iresponsehandler">IResponseHandler</a></td>
+<td>The callback for terminal response messages</td>
+</tr>
+</tbody></table>
+<h3 id='integra-methods-setchannelstatuslistener'>setChannelStatusListener</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">integra</span><span class="o">-&gt;</span><span class="n">setChannelStatusListener</span><span class="p">(</span><span class="n">channelListener</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">integra</span><span class="o">.</span><span class="na">setChannelStatusListener</span><span class="o">(</span><span class="n">channelListener</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">integra</span><span class="p">.</span><span class="n">channelStatusListener</span> <span class="p">+=</span> <span class="n">channelListener</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">integra</span><span class="o">.</span><span class="n">channelStatusListener</span> <span class="o">=</span> <span class="n">channelListener</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">integra</span> <span class="nf">setChannelStatusListener</span><span class="p">:</span><span class="n">channelListener</span><span class="p">];</span>
+</code></pre></div>
+<p>Attaches or overrides the current terminal connection status listener</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channelListener</td>
+<td><a href="#handlers-ichannelstatuslistener">IChannelStatusListener</a></td>
+<td>The callback for terminal status messages</td>
+</tr>
+</tbody></table>
+<h3 id='integra-methods-sendrequest'>sendRequest</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">int</span> <span class="n">sequenceNumber</span><span class="p">;</span>
+<span class="n">ErrorType</span> <span class="n">error</span> <span class="o">=</span> <span class="n">integra</span><span class="o">-&gt;</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">sequenceNumber</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">AtomicInteger</span> <span class="n">sequenceNumber</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">();</span>
+<span class="nc">ErrorType</span> <span class="n">error</span> <span class="o">=</span> <span class="n">integra</span><span class="o">.</span><span class="na">sendRequest</span><span class="o">(</span><span class="n">request</span><span class="o">,</span> <span class="n">sequenceNumber</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="kt">int</span> <span class="n">sequenceNumber</span><span class="p">;</span>
+<span class="n">ErrorType</span> <span class="n">error</span> <span class="p">=</span> <span class="n">integra</span><span class="p">.</span><span class="nf">sendRequest</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="k">out</span> <span class="n">sequenceNumber</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">var</span> <span class="nv">sequenceNumber</span><span class="p">:</span><span class="kt">Int32</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">let</span> <span class="nv">error</span><span class="p">:</span><span class="kt">PPErrorType</span> <span class="o">=</span> <span class="n">integra</span><span class="o">.</span><span class="nf">send</span><span class="p">(</span><span class="nv">request</span><span class="p">:</span> <span class="n">request</span><span class="p">,</span> <span class="nv">withSequenceNumber</span><span class="p">:</span><span class="o">&amp;</span><span class="n">sequenceNumber</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="kt">int</span> <span class="n">sequenceNumber</span><span class="p">;</span>
+<span class="n">PPErrorType</span> <span class="n">error</span> <span class="o">=</span> <span class="p">[</span><span class="n">integra</span> <span class="nf">sendRequest</span><span class="p">:</span><span class="n">request</span> <span class="nf">withSequenceNumber</span><span class="p">:</span><span class="o">&amp;</span><span class="n">sequenceNumber</span><span class="p">];</span>
+</code></pre></div>
+<p>Sends a request to the terminal. If the request is sent successfully <a href="#errors-errortype">ErrorType SUCCESS</a> will be returned and sequenceNumber will be set with that request&#39;s sequence number. When receiving terminal responses, you can check if the response sequenceNumber matches.
+Integra will start the associated CommunicationContext and will attempt to restore the connection if disconnected, up to a maximum of 1 minute or the specified timeout in CommunicationContext&#39;s Channel</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>request</td>
+<td><a href="#requests-irequest">IRequest</a></td>
+<td>The request to send to the terminal</td>
+</tr>
+<tr>
+<td>sequenceNumber</td>
+<td>Integer</td>
+<td>The sequence number used in the request (output variable)</td>
+</tr>
+</tbody></table>

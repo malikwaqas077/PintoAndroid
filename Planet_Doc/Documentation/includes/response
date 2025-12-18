@@ -1,0 +1,254 @@
+<h1 id='responses'>Responses</h1>
+<p>As part of the terminal operation, the terminal may send messages back to Integra, either as part of a reply to a previous request, or status messages indicating what the terminal is currently doing and displaying.</p>
+<h2 id='responses-statusupdate'>StatusUpdate</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">void</span> <span class="nf">onStatusUpdate</span><span class="p">(</span><span class="n">StatusUpdate</span> <span class="o">*</span><span class="n">statusUpdate</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Received a status update"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">params</span> <span class="o">:</span> <span class="n">statusUpdate</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">params</span><span class="p">.</span><span class="n">first</span> <span class="o">&lt;&lt;</span> <span class="s">": "</span> <span class="o">&lt;&lt;</span> <span class="n">params</span><span class="p">.</span><span class="n">second</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">void</span> <span class="nf">onStatusUpdate</span><span class="o">(</span><span class="nc">StatusUpdate</span> <span class="n">statusUpdate</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Received a status update"</span><span class="o">);</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">statusUpdate</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="o">());</span>
+<span class="o">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">onStatusUpdate</span><span class="p">(</span><span class="n">StatusUpdate</span> <span class="n">statusUpdate</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="s">"Received a status update"</span><span class="p">);</span>
+    <span class="k">foreach</span> <span class="p">(</span><span class="n">KeyValuePair</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">kvp</span> <span class="k">in</span> <span class="n">statusUpdate</span><span class="p">.</span><span class="nf">getOptions</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"Key = {0}, Value = {1}"</span><span class="p">,</span> <span class="n">kvp</span><span class="p">.</span><span class="n">Key</span><span class="p">,</span> <span class="n">kvp</span><span class="p">.</span><span class="n">Value</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kd">func</span> <span class="nf">onStatusUpdate</span><span class="p">(</span><span class="nv">update</span><span class="p">:</span> <span class="kt">PPStatusUpdate</span><span class="p">?)</span> <span class="p">{</span>
+
+    <span class="nf">print</span><span class="p">(</span><span class="s">"Received status update"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">in</span> <span class="n">update</span><span class="o">!.</span><span class="n">options</span> <span class="p">{</span>
+        <span class="nf">print</span><span class="p">(</span><span class="s">"Key = "</span> <span class="o">+</span> <span class="n">tag</span> <span class="o">+</span> <span class="s">", Value = "</span> <span class="o">+</span> <span class="n">value</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span> 
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nf">onStatusUpdate</span><span class="p">:(</span><span class="n">nullable</span> <span class="n">PPStatusUpdate</span> <span class="o">*</span><span class="p">)</span><span class="nv">update</span> <span class="p">{</span>
+    <span class="n">NSLog</span><span class="p">(</span><span class="s">@"Received status update"</span><span class="p">);</span>
+
+    <span class="p">[</span><span class="n">update</span><span class="p">.</span><span class="n">options</span> <span class="nf">enumerateKeysAndObjectsUsingBlock</span><span class="p">:</span><span class="o">^</span><span class="p">(</span><span class="n">id</span> <span class="n">tag</span><span class="p">,</span> <span class="n">id</span> <span class="n">value</span><span class="p">,</span> <span class="n">BOOL</span> <span class="o">*</span><span class="n">stop</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">NSLog</span><span class="p">(</span><span class="s">@"Key = %@, Value = %@"</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="p">}];</span>
+<span class="p">}</span>
+</code></pre></div>
+<blockquote>
+<p>This would print all options on <em>statusUpdate</em></p>
+</blockquote>
+
+<p>A StatusUpdate message is sent back as part of normal terminal operation. These messages may be indicating, for example:</p>
+
+<ul>
+<li>Terminal display messages, indicating that they have changed the screen which is currently being displayed;</li>
+<li>Card status messages, indicating that a card has been detected by the terminal and which data is currently available for this card;</li>
+<li>Power status messages, indicating current power level</li>
+<li>Info messages, with current terminal parameters. This message is also sent back on a <a href="#requests-status-requests-inforequest">InfoRequest</a></li>
+</ul>
+<h3 id='responses-statusupdate-methods'>Methods</h3><h3 id='responses-statusupdate-getoptions'>getOptions</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">statusOptions</span> <span class="o">=</span> <span class="n">statusUpdate</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">statusOptions</span> <span class="o">=</span> <span class="n">statusUpdate</span><span class="o">.</span><span class="na">getOptions</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">statusOptions</span> <span class="p">=</span> <span class="n">statusUpdate</span><span class="p">.</span><span class="nf">getOptions</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">statusOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="n">statusUpdate</span><span class="o">.</span><span class="n">options</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">NSDictionary</span><span class="o">&lt;</span><span class="n">NSString</span><span class="o">*</span><span class="p">,</span> <span class="n">NSString</span><span class="o">*&gt;</span> <span class="n">statusOptions</span> <span class="o">=</span> <span class="n">statusUpdate</span><span class="p">.</span><span class="n">options</span><span class="p">;</span>
+</code></pre></div>
+<blockquote>
+<p><em>statusOptions</em> contains all options in <em>statusUpdate</em></p>
+</blockquote>
+
+<p>getOptions returns a map containing the information about the status message</p>
+<h2 id='responses-response'>Response</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">void</span> <span class="nf">onResponse</span><span class="p">(</span><span class="n">Response</span> <span class="o">*</span><span class="n">response</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Received a response"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">params</span> <span class="o">:</span> <span class="n">response</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">params</span><span class="p">.</span><span class="n">first</span> <span class="o">&lt;&lt;</span> <span class="s">": "</span> <span class="o">&lt;&lt;</span> <span class="n">params</span><span class="p">.</span><span class="n">second</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">void</span> <span class="nf">onResponse</span><span class="o">(</span><span class="nc">Response</span> <span class="n">response</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Received a response"</span><span class="o">);</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">response</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="o">());</span>
+<span class="o">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">onResponse</span><span class="p">(</span><span class="n">Response</span> <span class="n">response</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="s">"Received a response"</span><span class="p">);</span>
+    <span class="k">foreach</span> <span class="p">(</span><span class="n">KeyValuePair</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">kvp</span> <span class="k">in</span> <span class="n">response</span><span class="p">.</span><span class="nf">getOptions</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"Key = {0}, Value = {1}"</span><span class="p">,</span> <span class="n">kvp</span><span class="p">.</span><span class="n">Key</span><span class="p">,</span> <span class="n">kvp</span><span class="p">.</span><span class="n">Value</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kd">func</span> <span class="nf">onResponse</span><span class="p">(</span><span class="nv">response</span><span class="p">:</span> <span class="kt">PPResponse</span><span class="p">?)</span> <span class="p">{</span>
+
+    <span class="nf">print</span><span class="p">(</span><span class="s">"Received a response"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">in</span> <span class="n">response</span><span class="o">!.</span><span class="n">options</span> <span class="p">{</span>
+        <span class="nf">print</span><span class="p">(</span><span class="s">"Key = "</span> <span class="o">+</span> <span class="n">tag</span> <span class="o">+</span> <span class="s">", Value = "</span> <span class="o">+</span> <span class="n">value</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span> 
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nf">onResponse</span><span class="p">:(</span><span class="n">nullable</span> <span class="n">PPResponse</span> <span class="o">*</span><span class="p">)</span><span class="nv">response</span> <span class="p">{</span>
+    <span class="n">NSLog</span><span class="p">(</span><span class="s">@"Received a response"</span><span class="p">);</span>
+
+    <span class="p">[</span><span class="n">response</span><span class="p">.</span><span class="n">options</span> <span class="nf">enumerateKeysAndObjectsUsingBlock</span><span class="p">:</span><span class="o">^</span><span class="p">(</span><span class="n">id</span> <span class="n">tag</span><span class="p">,</span> <span class="n">id</span> <span class="n">value</span><span class="p">,</span> <span class="n">BOOL</span> <span class="o">*</span><span class="n">stop</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">NSLog</span><span class="p">(</span><span class="s">@"Key = %@, Value = %@"</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="p">}];</span>
+<span class="p">}</span>
+</code></pre></div>
+<blockquote>
+<p>This would print all options on <em>response</em></p>
+</blockquote>
+
+<p>A Response message is sent back as a reply to a request sent by Integra</p>
+<h3 id='responses-response-methods'>Methods</h3><h3 id='responses-response-getoptions'>getOptions</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">responseOptions</span> <span class="o">=</span> <span class="n">response</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">responseOptions</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="na">getOptions</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">responseOptions</span> <span class="p">=</span> <span class="n">response</span><span class="p">.</span><span class="nf">getOptions</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">responseOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">options</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">NSDictionary</span><span class="o">&lt;</span><span class="n">NSString</span><span class="o">*</span><span class="p">,</span> <span class="n">NSString</span><span class="o">*&gt;</span> <span class="n">responseOptions</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="n">options</span>
+</code></pre></div>
+<blockquote>
+<p><em>responseOptions</em> contains all options in <em>response</em></p>
+</blockquote>
+
+<p>getOptions returns a map containing the information about the response message</p>
+<h2 id='responses-channelevent'>ChannelEvent</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">void</span> <span class="nf">onChannelEvent</span><span class="p">(</span><span class="n">ChannelEvent</span> <span class="o">*</span><span class="n">channelEvent</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Received a channel event of type "</span> <span class="o">&lt;&lt;</span> <span class="n">channelEvent</span><span class="o">-&gt;</span><span class="n">getType</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">params</span> <span class="o">:</span> <span class="n">channelEvent</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">params</span><span class="p">.</span><span class="n">first</span> <span class="o">&lt;&lt;</span> <span class="s">": "</span> <span class="o">&lt;&lt;</span> <span class="n">params</span><span class="p">.</span><span class="n">second</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">void</span> <span class="nf">onChannelEvent</span><span class="o">(</span><span class="nc">ChannelEvent</span> <span class="n">channelEvent</span><span class="o">)</span> <span class="o">{</span>
+
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Received a channel event of type "</span> <span class="o">+</span> <span class="n">channelEvent</span><span class="o">-&gt;</span><span class="n">getType</span><span class="o">());</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">channelEvent</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="o">());</span>
+<span class="o">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="k">private</span> <span class="k">void</span> <span class="nf">onChannelEvent</span><span class="p">(</span><span class="n">ChannelEvent</span> <span class="n">channelEvent</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="s">"Received a channel event of type "</span> <span class="p">+</span> <span class="n">channelEvent</span><span class="p">-&gt;</span><span class="nf">getType</span><span class="p">());</span>
+    <span class="k">foreach</span> <span class="p">(</span><span class="n">KeyValuePair</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">kvp</span> <span class="k">in</span> <span class="n">channelEvent</span><span class="p">.</span><span class="nf">getOptions</span><span class="p">())</span> <span class="p">{</span>
+        <span class="n">Console</span><span class="p">.</span><span class="nf">WriteLine</span><span class="p">(</span><span class="kt">string</span><span class="p">.</span><span class="nf">Format</span><span class="p">(</span><span class="s">"Key = {0}, Value = {1}"</span><span class="p">,</span> <span class="n">kvp</span><span class="p">.</span><span class="n">Key</span><span class="p">,</span> <span class="n">kvp</span><span class="p">.</span><span class="n">Value</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kd">func</span> <span class="nf">onChannelEvent</span><span class="p">(</span><span class="nv">channelEvent</span><span class="p">:</span> <span class="kt">PPChannelEvent</span><span class="p">?)</span> <span class="p">{</span>
+
+    <span class="nf">print</span><span class="p">(</span><span class="s">"Received a channel event of type "</span> <span class="o">+</span> <span class="n">channelEvent</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">in</span> <span class="n">channelEvent</span><span class="o">!.</span><span class="n">options</span> <span class="p">{</span>
+        <span class="nf">print</span><span class="p">(</span><span class="s">"Key = "</span> <span class="o">+</span> <span class="n">tag</span> <span class="o">+</span> <span class="s">", Value = "</span> <span class="o">+</span> <span class="n">value</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span> 
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nf">onChannelEvent</span><span class="p">:(</span><span class="n">nullable</span> <span class="n">PPChannelEvent</span> <span class="o">*</span><span class="p">)</span><span class="nv">channelEvent</span> <span class="p">{</span>
+    <span class="n">NSLog</span><span class="p">(</span><span class="s">@"Received a channel event of type %d"</span><span class="p">,</span> <span class="n">channelEvent</span><span class="p">.</span><span class="n">type</span><span class="p">);</span>
+
+    <span class="p">[</span><span class="n">channelEvent</span><span class="p">.</span><span class="n">options</span> <span class="nf">enumerateKeysAndObjectsUsingBlock</span><span class="p">:</span><span class="o">^</span><span class="p">(</span><span class="n">id</span> <span class="n">tag</span><span class="p">,</span> <span class="n">id</span> <span class="n">value</span><span class="p">,</span> <span class="n">BOOL</span> <span class="o">*</span><span class="n">stop</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">NSLog</span><span class="p">(</span><span class="s">@"Key = %@, Value = %@"</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="p">}];</span>
+<span class="p">}</span>
+</code></pre></div>
+<blockquote>
+<p><em>channelEvent</em> getType and getName can be used to obtain its details. Alternatively, <em>getOptions</em> may be used</p>
+</blockquote>
+
+<p>A <em>ChannelEvent</em> is fired when the channel changes state, or has new information</p>
+<h3 id='responses-channelevent-channeleventtype'>ChannelEventType</h3>
+<p>The following types of channel event&#39;s may be sent:</p>
+
+<table><thead>
+<tr>
+<th>ChannelEventType</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>NONE</td>
+<td>0</td>
+<td>No event</td>
+</tr>
+<tr>
+<td>CONNECTED</td>
+<td>1</td>
+<td>The channel is now connected</td>
+</tr>
+<tr>
+<td>CLIENT_CONNECTED</td>
+<td>2</td>
+<td>A client has connected to the channel (Server channels)</td>
+</tr>
+<tr>
+<td>DISCONNECTED</td>
+<td>3</td>
+<td>The channel has been disconnected</td>
+</tr>
+<tr>
+<td>CLIENT_DISCONNECTED</td>
+<td>4</td>
+<td>A client has disconnected from the channel (Server channels)</td>
+</tr>
+<tr>
+<td>CONNECT_TIMEOUT</td>
+<td>5</td>
+<td>The channel has timedout trying to connect</td>
+</tr>
+<tr>
+<td>ERROR_CHANNEL_EVENT</td>
+<td>6</td>
+<td>An error has occurred</td>
+</tr>
+<tr>
+<td>DATA_RVD</td>
+<td>7</td>
+<td>Data has been received</td>
+</tr>
+<tr>
+<td>DATA_SNT</td>
+<td>8</td>
+<td>Data has been sent</td>
+</tr>
+</tbody></table>
+<h3 id='responses-channelevent-methods'>Methods</h3><h3 id='responses-channelevent-gettype'>getType</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ChannelEventType</span> <span class="n">eventType</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">-&gt;</span><span class="n">getType</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nl">ChannelEvent:</span><span class="o">:</span><span class="nc">ChannelEventType</span> <span class="n">eventType</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">.</span><span class="na">getType</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ChannelEventType</span> <span class="n">eventType</span> <span class="p">=</span> <span class="n">channelEvent</span><span class="p">.</span><span class="nf">getType</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">eventType</span><span class="p">:</span><span class="kt">PPChannelEventType</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">.</span><span class="n">type</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPChannelEventType</span> <span class="n">eventType</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="p">.</span><span class="n">type</span>
+</code></pre></div>
+<blockquote>
+<p><em>eventType</em> contains the <em>channelEvent</em> <em>ChannelEventType</em></p>
+</blockquote>
+
+<p>getType returns the ChannelEventType of the fired ChannelEvent</p>
+<h3 id='responses-channelevent-getname'>getName</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">eventName</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">-&gt;</span><span class="n">getName</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">String</span> <span class="n">eventName</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="kt">string</span> <span class="n">eventName</span> <span class="p">=</span> <span class="n">channelEvent</span><span class="p">.</span><span class="nf">getName</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">eventName</span><span class="p">:</span><span class="kt">String</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">.</span><span class="n">name</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">NSString</span> <span class="o">*</span><span class="n">eventName</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="p">.</span><span class="n">name</span>
+</code></pre></div>
+<blockquote>
+<p><em>eventName</em> contains the <em>channelEvent</em> <em>ChannelEventType</em> name.
+For a <em>CONNECTED</em> event, <em>eventName</em> contains the value &quot;Connected&quot;</p>
+</blockquote>
+
+<p><em>getName</em> returns a human readable description of the <em>ChannelEvent</em></p>
+<h3 id='responses-channelevent-getoptions'>getOptions</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">eventOptions</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">-&gt;</span><span class="n">getOptions</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">eventOptions</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">.</span><span class="na">getOptions</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Dictionary</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">&gt;</span> <span class="n">eventOptions</span> <span class="p">=</span> <span class="n">channelEvent</span><span class="p">.</span><span class="nf">getOptions</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">eventOptions</span><span class="p">:</span><span class="kt">Dictionary</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="o">.</span><span class="n">options</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">NSDictionary</span><span class="o">&lt;</span><span class="n">NSString</span><span class="o">*</span><span class="p">,</span> <span class="n">NSString</span><span class="o">*&gt;</span> <span class="n">eventOptions</span> <span class="o">=</span> <span class="n">channelEvent</span><span class="p">.</span><span class="n">options</span>
+</code></pre></div>
+<blockquote>
+<p><em>eventOptions</em> contains the <em>channelEvent</em> information</p>
+</blockquote>
+
+<p><em>getOptions</em> returns a map containing the information about the response message. A <em>ChannelEvent</em> contains these options:</p>
+
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>statusCode</td>
+<td>The ChannelEventType</td>
+</tr>
+<tr>
+<td>statusMessage</td>
+<td>A human readable description of the ChannelEventType</td>
+</tr>
+</tbody></table>

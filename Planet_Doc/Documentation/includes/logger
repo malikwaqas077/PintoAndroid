@@ -1,0 +1,272 @@
+<h1 id='logger'>Logger</h1>
+<p>The SDK includes inbuilt logging capabilities for debugging and certification purposes. Besides internal SDK logging, an Integrator can use this for its own logging if needed. Even if an Integrator does not use the full logging capabilities in the SDK for its own purposes, it is recommended that the Integrator inserts its own log messages when performing any critical operation; having log messages inserted in order of operation leads to easier debugging than timestamp matching.</p>
+
+<p>The Logger works via appenders and log levels; by default, only ERROR (or more severe) logging is enabled. An appender instructs the logger to output its logs to a specific interface.</p>
+<h2 id='logger-initializing'>Initializing</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span><span class="o">::</span><span class="n">initialize</span><span class="p">(</span><span class="n">log_properties_file</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span><span class="o">.</span><span class="na">initialize</span><span class="o">(</span><span class="n">log_properties_file</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span><span class="p">.</span><span class="nf">initialize</span><span class="p">(</span><span class="n">log_properties_file</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPLogger</span><span class="o">.</span><span class="nf">initWithProperties</span><span class="p">(</span><span class="n">log_properties_file</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPLogger</span> <span class="nf">initWithProperties</span><span class="p">:</span><span class="n">log_properties_files</span><span class="p">];</span>
+</code></pre></div>
+<p>The logger can be initialized preemptively by calling its initialize method with the path to a log.properties file. This provides a clean way to setup the logger and prevent defaults from being used inadvertently. A typical log.properties file looks like this:</p>
+<h3 id='logger-initializing-log-properties-example'>log.properties example</h3>
+<p>rootLogger = DEBUG, console, server, rollingfile<br>
+rollingfile.MaxFileSize = 10240kb<br>
+rollingfile.MaxBackupIndex = 10<br>
+rollingfile.File=./logs/IntegrationSDK_%Y%m%d.log<br>
+serverLogPort=10000<br>
+serverLogStore=true<br>
+serverLogStoreMaxMessages=2500<br></p>
+
+<p>This log.properties does the following:</p>
+
+<table><thead>
+<tr>
+<th>Line</th>
+<th>Effect</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>rootLogger = DEBUG, console, server, rollingfile</td>
+<td>Enables DEBUG log level, local console logs (stdout), server logs and rollingfile logs</td>
+</tr>
+<tr>
+<td>rollingfile.MaxFileSize = 10240kb</td>
+<td>Sets the maximum filesize for the rollingfile appender to 10240kb</td>
+</tr>
+<tr>
+<td>rollingfile.MaxBackupIndex = 10</td>
+<td>Sets the maximum rollover index for the rollingfile to 10</td>
+</tr>
+<tr>
+<td>rollingfile.File=./logs/IntegrationSDK_%Y%m%d.log</td>
+<td>Sets the base name for the rollingfile appender. Although rollingfile logs also contain the rollover index, in this case we date stamp it as well</td>
+</tr>
+<tr>
+<td>serverLogPort=10000</td>
+<td>Sets the server log port. A socket will be open on port 10000 where log messages will be emitted</td>
+</tr>
+<tr>
+<td>serverLogStore=true</td>
+<td>Instructs the server appender to store older messages. On connection, the server appender will first emit the older logs, before resuming real time logging</td>
+</tr>
+<tr>
+<td>serverLogStoreMaxMessages=2500</td>
+<td>Caps the maximum server appender message store to 2500 messages. Older messages will be discarded</td>
+</tr>
+</tbody></table>
+<h3 id='logger-initializing-production-log-properties-example'>Production log.properties example</h3>
+<p>rootLogger = ERROR, rollingfile<br>
+rollingfile.MaxFileSize = 10240kb<br>
+rollingfile.MaxBackupIndex = 10<br>
+rollingfile.File=./logs/IntegrationSDK_%Y%m%d.log<br></p>
+
+<p>A typical setup for production environments. Only ERROR or more severe are allowed, and only on local file storage. Console and Server should only be used to debugging purposes.</p>
+<h3 id='logger-initializing-available-appenders'>Available appenders</h3>
+<table><thead>
+<tr>
+<th>Appender</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>console</td>
+<td>Outputs to local console (stdout)</td>
+</tr>
+<tr>
+<td>server</td>
+<td>Outputs to local server socket. Port and behaviour can be configured</td>
+</tr>
+<tr>
+<td>rollingfile</td>
+<td>Outputs to local file storage. File name, size and number of files can be configured</td>
+</tr>
+<tr>
+<td>json</td>
+<td>Output to remote json server. Needs to be configured on an individual installation basis</td>
+</tr>
+</tbody></table>
+<h2 id='logger-setloggersetting'>setLoggerSetting</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span><span class="o">::</span><span class="n">setLoggerSetting</span><span class="p">(</span><span class="n">logger_setting</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span><span class="o">.</span><span class="na">setLoggerSetting</span><span class="o">(</span><span class="n">logger_setting</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span><span class="p">.</span><span class="nf">setLoggerSetting</span><span class="p">(</span><span class="n">logger_setting</span><span class="p">,</span> <span class="k">value</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPLogger</span><span class="o">.</span><span class="nf">setLoggerSetting</span><span class="p">(</span><span class="n">logger_setting</span><span class="p">,</span> <span class="nv">withValue</span><span class="p">:</span> <span class="n">value</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPLogger</span> <span class="nf">setLoggerSetting</span><span class="p">:</span><span class="n">logger_setting</span> <span class="nf">withValue</span><span class="p">:</span><span class="n">value</span><span class="p">];</span>
+</code></pre></div>
+<p>If a log.properties cannot be used, or a dynamic environment is prefered, the Logger can be configured directly using setLoggerSetting. The available logger_settings are:</p>
+
+<table><thead>
+<tr>
+<th>Setting</th>
+<th>Example Values</th>
+<th>Effect</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>LOG_LEVEL</td>
+<td>trace, debug, info, warn, error, fatal, none</td>
+<td>Sets the Logger log level. Logs below the level of severity indicated will be discarded</td>
+</tr>
+<tr>
+<td>LOG_LEVEL_AND_APPENDERS</td>
+<td>[LOG_LEVEL], [APPENDER1, APPENDER2, ...]</td>
+<td>ex: DEBUG, console, server. Sets the Logger log level and enabled appenders. Multiple appenders can be enabled simultaneously</td>
+</tr>
+<tr>
+<td>PATTERN</td>
+<td>%d %t [%c{1}] %p - %m</td>
+<td>Log message pattern. Default includes timestamp, severity, identifier and message. Pattern follow log4j standards</td>
+</tr>
+<tr>
+<td>LOGGING_FILE_BASE_NAME</td>
+<td>SDK_%Y%m%d.log</td>
+<td>Base file name used for the rollingfile appender. Timestamp patterns are allowed. On rollover, an incremental counter is used</td>
+</tr>
+<tr>
+<td>FILESIZE</td>
+<td>1024kb</td>
+<td>Maximum file size for each individual log file</td>
+</tr>
+<tr>
+<td>FILE_MAX_NUMBER</td>
+<td>5</td>
+<td>Maximum rolling file index to keep. Older files will be discarded</td>
+</tr>
+<tr>
+<td>SERVER_LOG_PORT</td>
+<td>10000</td>
+<td>Port where the server appender will listen for connections</td>
+</tr>
+<tr>
+<td>SERVER_LOG_STORE</td>
+<td>true</td>
+<td>Configure the server appender to store older messages. These will be logged when a client connects, before resuming real time logging</td>
+</tr>
+<tr>
+<td>SERVER_LOG_STORE_MAX_MESSAGES</td>
+<td>2500</td>
+<td>Configures the server appender cache size reserved for stored messages</td>
+</tr>
+<tr>
+<td>UNIQUE_ID</td>
+<td>123456789ABC</td>
+<td>Unique ID used to identify an SDK installation. This ID will be auto-generated if left blank</td>
+</tr>
+</tbody></table>
+<h2 id='logger-getloggersetting'>getLoggerSetting</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span><span class="o">::</span><span class="n">getLoggerSetting</span><span class="p">(</span><span class="n">logger_setting</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span><span class="o">.</span><span class="na">getLoggerSetting</span><span class="o">(</span><span class="n">logger_setting</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span><span class="p">.</span><span class="nf">getLoggerSetting</span><span class="p">(</span><span class="n">logger_setting</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLoggerSetting</span><span class="p">(</span><span class="n">logger_setting</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLoggerSetting</span><span class="p">:</span><span class="n">logger_setting</span><span class="p">];</span>
+</code></pre></div>
+<p>Returns the current value in use for a particular setting</p>
+<h2 id='logger-is-level-enabled'>is[Level]Enabled</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span><span class="o">::</span><span class="n">isFatalEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="o">::</span><span class="n">isErrorEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="o">::</span><span class="n">isWarnEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="o">::</span><span class="n">isInfoEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="o">::</span><span class="n">isDebugEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="o">::</span><span class="n">isTraceEnabled</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span><span class="o">.</span><span class="na">isFatalEnabled</span><span class="o">();</span>
+<span class="nc">Logger</span><span class="o">.</span><span class="na">isErrorEnabled</span><span class="o">();</span>
+<span class="nc">Logger</span><span class="o">.</span><span class="na">isWarnEnabled</span><span class="o">();</span>
+<span class="nc">Logger</span><span class="o">.</span><span class="na">isInfoEnabled</span><span class="o">();</span>
+<span class="nc">Logger</span><span class="o">.</span><span class="na">isDebugEnabled</span><span class="o">();</span>
+<span class="nc">Logger</span><span class="o">.</span><span class="na">isTraceEnabled</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span><span class="p">.</span><span class="nf">isFatalEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="p">.</span><span class="nf">isErrorEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="p">.</span><span class="nf">isWarnEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="p">.</span><span class="nf">isInfoEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="p">.</span><span class="nf">isDebugEnabled</span><span class="p">();</span>
+<span class="n">Logger</span><span class="p">.</span><span class="nf">isTraceEnabled</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPLogger</span><span class="o">.</span><span class="nf">isFatalEnabled</span><span class="p">()</span>
+<span class="kt">PPLogger</span><span class="o">.</span><span class="nf">isErrorEnabled</span><span class="p">()</span>
+<span class="kt">PPLogger</span><span class="o">.</span><span class="nf">isWarnEnabled</span><span class="p">()</span>
+<span class="kt">PPLogger</span><span class="o">.</span><span class="nf">isInfoEnabled</span><span class="p">()</span>
+<span class="kt">PPLogger</span><span class="o">.</span><span class="nf">isDebugEnabled</span><span class="p">()</span>
+<span class="kt">PPLogger</span><span class="o">.</span><span class="nf">isTraceEnabled</span><span class="p">()</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPLogger</span> <span class="nf">isFatalEnabled</span><span class="p">];</span>
+<span class="p">[</span><span class="n">PPLogger</span> <span class="nf">isErrorEnabled</span><span class="p">];</span>
+<span class="p">[</span><span class="n">PPLogger</span> <span class="nf">isWarnEnabled</span><span class="p">];</span>
+<span class="p">[</span><span class="n">PPLogger</span> <span class="nf">isInfoEnabled</span><span class="p">];</span>
+<span class="p">[</span><span class="n">PPLogger</span> <span class="nf">isDebugEnabled</span><span class="p">];</span>
+<span class="p">[</span><span class="n">PPLogger</span> <span class="nf">isTraceEnabled</span><span class="p">];</span>
+</code></pre></div>
+<p>Quickly check if a certain log level is enabled</p>
+<h2 id='logger-logger-getlogger'>Logger / getLogger</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span> <span class="o">*</span><span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">::</span><span class="n">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span> <span class="n">log</span> <span class="o">=</span> <span class="nc">Logger</span><span class="o">.</span><span class="na">getLogger</span><span class="o">(</span><span class="n">identifier</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span> <span class="n">log</span> <span class="p">=</span> <span class="n">Logger</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLogger</span><span class="p">:</span><span class="n">identifier</span><span class="p">];</span>
+</code></pre></div>
+<p>Logger is a generic interface which gives access to the logger. This is the main way of interfacing with the Logger. It is intended that each class (or instance if more granularity is needed) uses its own Logger. Any messages emitted through a Logger instance will have its message preprended by the timestamp, log level, and identifier by default.</p>
+<h3 id='logger-logger-getlogger-fatal'>fatal</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span> <span class="o">*</span><span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">::</span><span class="n">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="o">-&gt;</span><span class="n">fatal</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span> <span class="n">log</span> <span class="o">=</span> <span class="nc">Logger</span><span class="o">.</span><span class="na">getLogger</span><span class="o">(</span><span class="n">identifier</span><span class="o">);</span>
+<span class="n">log</span><span class="o">.</span><span class="na">fatal</span><span class="o">(</span><span class="n">message</span><span class="o">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span> <span class="n">log</span> <span class="p">=</span> <span class="n">Logger</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="p">.</span><span class="nf">fatal</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">log</span> <span class="o">=</span> <span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="nf">fatal</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPLogger</span><span class="o">*</span> <span class="n">log</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLogger</span><span class="p">:</span><span class="n">identifier</span><span class="p">];</span>
+<span class="p">[</span><span class="n">log</span> <span class="nf">fatal</span><span class="p">:</span><span class="n">message</span><span class="p">];</span>
+</code></pre></div>
+<p>Emit a message with FATAL severity</p>
+<h3 id='logger-logger-getlogger-error'>error</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span> <span class="o">*</span><span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">::</span><span class="n">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="o">-&gt;</span><span class="n">error</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span> <span class="n">log</span> <span class="o">=</span> <span class="nc">Logger</span><span class="o">.</span><span class="na">getLogger</span><span class="o">(</span><span class="n">identifier</span><span class="o">);</span>
+<span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="n">message</span><span class="o">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span> <span class="n">log</span> <span class="p">=</span> <span class="n">Logger</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">log</span> <span class="o">=</span> <span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="nf">error</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPLogger</span><span class="o">*</span> <span class="n">log</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLogger</span><span class="p">:</span><span class="n">identifier</span><span class="p">];</span>
+<span class="p">[</span><span class="n">log</span> <span class="nf">error</span><span class="p">:</span><span class="n">message</span><span class="p">];</span>
+</code></pre></div>
+<p>Emit a message with ERROR severity</p>
+<h3 id='logger-logger-getlogger-warn'>warn</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span> <span class="o">*</span><span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">::</span><span class="n">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="o">-&gt;</span><span class="n">warn</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span> <span class="n">log</span> <span class="o">=</span> <span class="nc">Logger</span><span class="o">.</span><span class="na">getLogger</span><span class="o">(</span><span class="n">identifier</span><span class="o">);</span>
+<span class="n">log</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="n">message</span><span class="o">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span> <span class="n">log</span> <span class="p">=</span> <span class="n">Logger</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="p">.</span><span class="nf">warn</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">log</span> <span class="o">=</span> <span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="nf">warn</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPLogger</span><span class="o">*</span> <span class="n">log</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLogger</span><span class="p">:</span><span class="n">identifier</span><span class="p">];</span>
+<span class="p">[</span><span class="n">log</span> <span class="nf">warn</span><span class="p">:</span><span class="n">message</span><span class="p">];</span>
+</code></pre></div>
+<p>Emit a message with WARN severity</p>
+<h3 id='logger-logger-getlogger-info'>info</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span> <span class="o">*</span><span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">::</span><span class="n">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="o">-&gt;</span><span class="n">info</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span> <span class="n">log</span> <span class="o">=</span> <span class="nc">Logger</span><span class="o">.</span><span class="na">getLogger</span><span class="o">(</span><span class="n">identifier</span><span class="o">);</span>
+<span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="n">message</span><span class="o">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span> <span class="n">log</span> <span class="p">=</span> <span class="n">Logger</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">log</span> <span class="o">=</span> <span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="nf">info</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPLogger</span><span class="o">*</span> <span class="n">log</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLogger</span><span class="p">:</span><span class="n">identifier</span><span class="p">];</span>
+<span class="p">[</span><span class="n">log</span> <span class="nf">info</span><span class="p">:</span><span class="n">message</span><span class="p">];</span>
+</code></pre></div>
+<p>Emit a message with INFO severity</p>
+<h3 id='logger-logger-getlogger-debug'>debug</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span> <span class="o">*</span><span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">::</span><span class="n">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="o">-&gt;</span><span class="n">debug</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span> <span class="n">log</span> <span class="o">=</span> <span class="nc">Logger</span><span class="o">.</span><span class="na">getLogger</span><span class="o">(</span><span class="n">identifier</span><span class="o">);</span>
+<span class="n">log</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="n">message</span><span class="o">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span> <span class="n">log</span> <span class="p">=</span> <span class="n">Logger</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">log</span> <span class="o">=</span> <span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="nf">debug</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPLogger</span><span class="o">*</span> <span class="n">log</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLogger</span><span class="p">:</span><span class="n">identifier</span><span class="p">];</span>
+<span class="p">[</span><span class="n">log</span> <span class="nf">debug</span><span class="p">:</span><span class="n">message</span><span class="p">];</span>
+</code></pre></div>
+<p>Emit a message with DEBUG severity</p>
+<h3 id='logger-logger-getlogger-trace'>trace</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">Logger</span> <span class="o">*</span><span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">::</span><span class="n">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="o">-&gt;</span><span class="n">trace</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">Logger</span> <span class="n">log</span> <span class="o">=</span> <span class="nc">Logger</span><span class="o">.</span><span class="na">getLogger</span><span class="o">(</span><span class="n">identifier</span><span class="o">);</span>
+<span class="n">log</span><span class="o">.</span><span class="na">trace</span><span class="o">(</span><span class="n">message</span><span class="o">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">Logger</span> <span class="n">log</span> <span class="p">=</span> <span class="n">Logger</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+<span class="n">log</span><span class="p">.</span><span class="nf">trace</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">log</span> <span class="o">=</span> <span class="kt">PPLogger</span><span class="o">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="nf">trace</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPLogger</span><span class="o">*</span> <span class="n">log</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPLogger</span> <span class="nf">getLogger</span><span class="p">:</span><span class="n">identifier</span><span class="p">];</span>
+<span class="p">[</span><span class="n">log</span> <span class="nf">trace</span><span class="p">:</span><span class="n">message</span><span class="p">];</span>
+</code></pre></div>
+<p>Emit a message with TRACE severity</p>

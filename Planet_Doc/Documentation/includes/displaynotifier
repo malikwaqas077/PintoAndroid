@@ -1,0 +1,222 @@
+# DisplayNotifier
+
+The DisplayNotifier service offers a way to maintain a permament connection to a terminal and receive DisplayStatus messages without impacting regular request operations; it functions independently of Integra and is not expected to process any terminal requests. Typically, a terminal is configured to connect to a running DisplayNotifier service, where it will forward any DisplayStatus message.
+
+## Methods
+
+### Constructor
+
+```cpp
+DisplayNotifier *notifier = new DisplayNotifier(communicationContext, statusUpdateHandler, channelStatusListener);
+```
+
+```java
+DisplayNotifier notifier = new DisplayNotifier(communicationContext, statusUpdateHandler, channelStatusListener);
+```
+
+```csharp
+DisplayNotifier notifier = new DisplayNotifier(communicationContext);
+```
+
+```swift
+let notifier:PPDisplayNotifier = PPDisplayNotifier.init(communicationContext: communicationContext, with: statusUpdateHandler, andChannelStatusListener: channelStatusListener)
+```
+
+```objective_c
+PPDisplayNotifier *notifier = [PPDisplayNotifier alloc] initWithCommunicationContext:communicationContext withStatusUpdateHandler:statusUpdateHandler andChannelStatusListener:channelStatusListener];
+```
+
+Creates an instance of DisplayNotifier. DisplayNotifier requires a [CommunicationContext](#communicationcontext). A [IStatusUpdateHandler](#handlers-istatusupdatehandler) is required for it's operation. Optionally it can also receive a [IChannelStatusListener](#handlers-ichannelstatuslistener) for channel events
+
+Parameter | Type | Description
+--------- | ----------- | -----------
+communicationContext | [CommunicationContext](#communicationcontext) | An instance of a CommunicationContext to send/receive data from the terminal
+statusUpdateHandler | [IStatusUpdateHandler](#handlers-istatusupdatehandler) | The callback for terminal status messages
+channelStatusListener | [IChannelStatusListener](#handlers-ichannelstatuslistener) | The callback for channel events
+
+### enableAutoReconnect
+
+```cpp
+notifier->enableAutoReconnect(enable);
+```
+
+```java
+notifier.enableAutoReconnect(enable);
+```
+
+```csharp
+notifier.AutoReconnect = enable;
+```
+
+```swift
+notifier.isAutoReconnectEnabled = enable
+```
+
+```objective_c
+[notifier enableAutoReconnect:enable];
+```
+
+Enables or disables the auto reconnect feature. If this feature is enabled, when the connection to the terminal has been interrupted the SDK will automatically attempt to re-establish the connection. DisplayNotifier is typically configured running as a server, so this setting is rarely required.
+
+Parameter | Type | Description
+--------- | ----------- | -----------
+enable | Boolean | Enable/Disable flag
+
+
+### isAutoReconnectEnabled
+
+```cpp
+notifier->isAutoReconnectEnabled();
+```
+
+```java
+notifier.isAutoReconnectEnabled();
+```
+
+```csharp
+notifier.AutoReconnect;
+```
+
+```swift
+notifier.isAutoReconnectEnabled
+```
+
+```objective_c
+notifier.isAutoReconnectEnabled;
+```
+
+Checks if the auto reconnect feature is enabled or disabled
+
+### setStatusUpdateHandler
+
+```cpp
+notifier->setStatusUpdateHandler(statusUpdateHandler);
+```
+
+```java
+notifier.setStatusUpdateHandler(statusUpdateHandler);
+```
+
+```csharp
+notifier.statusUpdateHandler += statusHandler;
+```
+
+```swift
+notifier.statusHandler = statusUpdateHandler
+```
+
+```objective_c
+[notifier setStatusHandler:statusUpdateHandler];
+```
+
+Attaches or overrides the current terminal status listener
+
+Parameter | Type | Description
+--------- | ----------- | -----------
+statusUpdateHandler | [IStatusUpdateHandler](#handlers-istatusupdatehandler) | The callback for terminal status messages
+
+### setChannelStatusListener
+
+```cpp
+notifier->setChannelStatusListener(channelListener);
+```
+
+```java
+notifier.setChannelStatusListener(channelListener);
+```
+
+```csharp
+notifier.channelStatusListener += channelListener;
+```
+
+```swift
+notifier.channelStatusListener = channelListener
+```
+
+```objective_c
+[notifier setChannelStatusListener:channelListener];
+```
+
+Attaches or overrides the current terminal connection status listener
+
+Parameter | Type | Description
+--------- | ----------- | -----------
+channelListener | [IChannelStatusListener](#handlers-ichannelstatuslistener) | The callback for terminal status messages
+
+### cancelRequest
+
+```cpp
+ErrorType error = notifier->cancelRequest(cancelOptions);
+```
+
+```java
+ErrorType error = notifier.cancelRequest(cancelOptions);
+```
+
+```csharp
+ErrorType error = notifier.CancelRequest(cancelOptions);
+```
+
+```swift
+let error:PPErrorType = notifier.cancelRequest(cancelOptions: cancelOptions)
+```
+
+```objective_c
+PPErrorType error = [notifier cancelRequest:cancelOptions];
+```
+
+Sends a CancelRequest to the terminal. If the request is sent successfully [ErrorType SUCCESS](#errors-errortype) will be returned. No response will be returned to the DisplayNotifier.
+DisplayNotifier will assume the CancelRequest is to be sent to the first available client. To override this behaviour, set KEY_CLIENT_ID in cancelOptions with the corresponding client ID sent during the CLIENT_CONNECTED channel event.
+if running on client mode, DisplayNotifier will start the associated CommunicationContext and will attempt to restore the connection when disconnected.
+
+Parameter | Type | Description
+--------- | ----------- | -----------
+cancelOptions | Map | An option map containing the options for the cancel request
+
+### start
+
+```cpp
+bool hasStarted = notifier->start();
+```
+
+```java
+bool hasStarted = notifier.start()
+```
+
+```csharp
+bool hasStarted = notifier.Start();
+```
+
+```swift
+let hasStarted = notifier.start()
+```
+
+```objective_c
+BOOL hasStarted = [notifier start];
+```
+
+Instructs the DisplayNotifier service to start accepting connections, or to connect if running on client mode
+
+### stop
+
+```cpp
+notifier->stop();
+```
+
+```java
+notifier.stop()
+```
+
+```csharp
+notifier.Stop();
+```
+
+```swift
+notifier.stop()
+```
+
+```objective_c
+[notifier stop];
+```
+
+Instructs the DisplayNotifier service to stop accepting connections, and close any existing connection

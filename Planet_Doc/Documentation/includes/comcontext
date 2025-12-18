@@ -1,0 +1,75 @@
+<h1 id='communicationcontext'>CommunicationContext</h1>
+<p>CommunicationContext holds the relevant instances to communicate directly with a terminal: A Communication&#39;s channel and a Datalink</p>
+<h2 id='communicationcontext-methods'>Methods</h2><h3 id='communicationcontext-methods-constructor'>Constructor</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">CommunicationContext</span> <span class="o">*</span><span class="n">comContext</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">CommunicationContext</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">datalink</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">CommunicationContext</span> <span class="n">comContext</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CommunicationContext</span><span class="o">(</span><span class="n">channel</span><span class="o">,</span> <span class="n">datalink</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">CommunicationContext</span> <span class="n">comContext</span> <span class="p">=</span> <span class="k">new</span> <span class="nf">CommunicationContext</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">datalink</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">comContext</span><span class="p">:</span><span class="kt">PPCommunicationContext</span> <span class="o">=</span> <span class="kt">PPCommunicationContext</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="nv">channel</span><span class="p">:</span> <span class="n">channel</span><span class="p">,</span> <span class="nv">andDatalink</span><span class="p">:</span> <span class="n">datalink</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPCommunicationContext</span> <span class="o">*</span><span class="n">comContext</span> <span class="o">=</span> <span class="p">[[</span><span class="n">PPCommunicationContext</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">initWithChannel</span><span class="p">:</span><span class="n">channel</span> <span class="nf">andDatalink</span><span class="p">:</span><span class="n">datalink</span><span class="p">];</span>
+</code></pre></div>
+<p>Creates an instance of CommunicationContext. A <a href="#channels-ichannel">IChannel</a> is required, as well as a <a href="#datalinks-idatalink">IDatalink</a>. The CommunicationContext connects directly to the terminal and sends/receives raw data, encoded by the Datalink.</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>channel</td>
+<td><a href="#channels-ichannel">IChannel</a></td>
+<td>The communication channel to be used to connect to the terminal (ChannelSocketClient, ChannelComPort...). This is required and may not be null</td>
+</tr>
+<tr>
+<td>datalink</td>
+<td><a href="#datalinks-idatalink">IDatalink</a></td>
+<td>The datalink type to communicate with the terminal (Datalink, DatalinkStxEtcCrcSendAckSeqCounter...). This is required and may not be null</td>
+</tr>
+</tbody></table>
+
+<aside class="warning">
+    CommunicationContext takes ownership of the Channel and Datalink objects passed in its constructor. Upon CommunicationContext deallocation, these Channel and Datalink objects will also be disposed.
+</aside>
+<h3 id='communicationcontext-methods-start'>start</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">comContext</span><span class="o">-&gt;</span><span class="n">start</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">comContext</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">comContext</span><span class="p">.</span><span class="nf">start</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">comContext</span><span class="o">.</span><span class="nf">start</span><span class="p">()</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">comContext</span> <span class="nf">start</span><span class="p">];</span>
+</code></pre></div>
+<p>Starts the context and connects to the terminal. Integra will call this method if the terminal is not connected before <a href="#integra-methods-sendrequest">Integra sendRequest</a> is called</p>
+<h3 id='communicationcontext-methods-stop'>stop</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">comContext</span><span class="o">-&gt;</span><span class="n">stop</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">comContext</span><span class="o">.</span><span class="na">stop</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">comContext</span><span class="p">.</span><span class="nf">stop</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">comContext</span><span class="o">.</span><span class="nf">stop</span><span class="p">()</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="p">[</span><span class="n">comContext</span> <span class="nf">stop</span><span class="p">];</span>
+</code></pre></div>
+<p>Closes the connection to the terminal</p>
+<h3 id='communicationcontext-methods-isconnected'>isConnected</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">bool</span> <span class="n">isConnected</span> <span class="o">=</span> <span class="n">comContext</span><span class="o">-&gt;</span><span class="n">isConnected</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">boolean</span> <span class="n">isConnected</span> <span class="o">=</span> <span class="n">comContext</span><span class="o">.</span><span class="na">isConnected</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="kt">bool</span> <span class="n">isConnected</span> <span class="p">=</span> <span class="n">comContext</span><span class="p">.</span><span class="nf">isConnected</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">Bool</span> <span class="n">isConnected</span> <span class="o">=</span> <span class="n">comContext</span><span class="o">.</span><span class="nf">isConnected</span><span class="p">()</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">BOOL</span> <span class="n">isConnected</span> <span class="o">=</span> <span class="p">[</span><span class="n">comContext</span> <span class="n">isConnected</span><span class="p">()];</span>
+</code></pre></div>
+<p>Checks if the terminal is connected</p>
+<h3 id='communicationcontext-methods-setshouldasyncstart'>setShouldAsyncStart</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">comContext</span><span class="o">-&gt;</span><span class="n">setShouldAsyncStart</span><span class="p">(</span><span class="n">enable</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="n">comContext</span><span class="o">.</span><span class="na">setShouldAsyncStart</span><span class="o">(</span><span class="n">enable</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">comContext</span><span class="p">.</span><span class="n">AsyncStart</span> <span class="p">=</span> <span class="n">enable</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="n">commContext</span><span class="o">.</span><span class="n">shouldAsyncStart</span> <span class="o">=</span> <span class="n">enable</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">commContext</span><span class="p">.</span><span class="n">shouldAsyncStart</span> <span class="o">=</span> <span class="n">enable</span><span class="p">;</span>
+</code></pre></div>
+<p>If True, this flag indicates that Integra will start this communication context in a background thread instead of the calling thread.
+Since the connection will be made asynchronously, one must take care to only attempt to send requests after a channel CONNECTED status has been received.</p>
+<h3 id='communicationcontext-methods-shouldasyncstart'>shouldAsyncStart</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="kt">bool</span> <span class="n">isAsyncStart</span> <span class="o">=</span> <span class="n">comContext</span><span class="o">-&gt;</span><span class="n">shouldAsyncStart</span><span class="p">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="kt">boolean</span> <span class="n">isAsyncStart</span> <span class="o">=</span> <span class="n">comContext</span><span class="o">.</span><span class="na">shouldAsyncStart</span><span class="o">();</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="kt">bool</span> <span class="n">isAsyncStart</span> <span class="p">=</span> <span class="n">comContext</span><span class="p">.</span><span class="n">AsyncStart</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="kt">Bool</span> <span class="n">isAsyncStart</span> <span class="o">=</span> <span class="n">commContext</span><span class="o">.</span><span class="n">shouldAsyncStart</span><span class="p">;</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">BOOL</span> <span class="n">isAsyncStart</span> <span class="o">=</span> <span class="n">commContext</span><span class="p">.</span><span class="n">shouldAsyncStart</span><span class="p">;</span>
+</code></pre></div>
+<p>Returns the current flag value for async start.</p>
+<h3 id='communicationcontext-methods-send'>send</h3><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">ErrorType</span> <span class="n">error</span> <span class="o">=</span> <span class="n">comContext</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">channelId</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">ErrorType</span> <span class="n">error</span> <span class="o">=</span> <span class="n">comContext</span><span class="o">.</span><span class="na">send</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">channelId</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="n">ErrorType</span> <span class="n">error</span> <span class="p">=</span> <span class="n">comContext</span><span class="p">.</span><span class="nf">send</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">channelId</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">error</span><span class="p">:</span><span class="kt">PPErrorType</span> <span class="o">=</span> <span class="n">commContext</span><span class="o">.</span><span class="nf">send</span><span class="p">(</span><span class="nv">message</span><span class="p">:</span> <span class="n">message</span><span class="p">,</span> <span class="nv">onChannelId</span><span class="p">:</span><span class="n">channelId</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">PPErrorType</span> <span class="n">error</span> <span class="o">=</span> <span class="p">[</span><span class="n">commContext</span> <span class="nf">send</span><span class="p">:</span><span class="n">message</span> <span class="nf">onChannelId</span><span class="p">:</span><span class="n">channelId</span><span class="p">];</span>
+</code></pre></div>
+<p>Sends raw data to the terminal. If the data is sent successfully <a href="#errors-errortype">ErrorType SUCCESS</a> will be returned.</p>

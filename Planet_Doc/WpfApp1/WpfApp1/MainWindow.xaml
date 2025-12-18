@@ -1,0 +1,33 @@
+﻿<Window x:Class="WpfApp1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfApp1"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <Button Content="Connect" HorizontalAlignment="Left" Margin="347,95,0,0" VerticalAlignment="Top" Click="Connect_Click" Width="53"/>
+        <Label Content="Device IP" HorizontalAlignment="Left" Margin="86,66,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="tbDeviceIP" HorizontalAlignment="Left" Margin="86,97,0,0" TextWrapping="Wrap" Text="192.168.2.110" VerticalAlignment="Top" Width="120"/>
+        <Label Content="Device Port" HorizontalAlignment="Left" Margin="211,66,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="tbDevicePort" HorizontalAlignment="Left" Margin="211,97,0,0" TextWrapping="Wrap" Text="1234" VerticalAlignment="Top" Width="120"/>
+        <Label Content="Amount (pence)" HorizontalAlignment="Left" Margin="86,143,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="tbAmount" HorizontalAlignment="Left" Margin="86,174,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="120"/>
+        <Label Content="Txn Ref" HorizontalAlignment="Left" Margin="211,143,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="tbTxnRef" HorizontalAlignment="Left" Margin="211,174,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="120" />
+        <ListView x:Name="lvMessages" Margin="86,244,82,10" />
+        <Label Content="Messages" HorizontalAlignment="Left" Margin="86,213,0,0" VerticalAlignment="Top"/>
+        <Button Name="btnStartPayment" Content="Start Payment" HorizontalAlignment="Left" Margin="336,173,0,0" VerticalAlignment="Top" Click="btnStartPayment_Click"/>
+        <Label Name="lblPaymentStatus" Content="" HorizontalAlignment="Left" Margin="464,175,0,0" VerticalAlignment="Top" Height="29"/>
+        <Label Content="Payment Status" HorizontalAlignment="Left" Margin="464,151,0,0" VerticalAlignment="Top"/>
+        <Button Content="Start PreAuth" HorizontalAlignment="Left" Margin="336,198,0,0" VerticalAlignment="Top" Width="77" Click="Button_Click"/>
+        <Label Content="Commit Amount" HorizontalAlignment="Left" Margin="523,23,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="tbCommitAmount" HorizontalAlignment="Left" Margin="523,54,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="120"/>
+        <Label Content="Token" HorizontalAlignment="Left" Margin="648,23,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="tbTokenRef" HorizontalAlignment="Left" Margin="648,54,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="120"/>
+        <Button Content="Confirm Amount" HorizontalAlignment="Left" Margin="614,77,0,0" VerticalAlignment="Top" Width="104" Click="Button_Click_1"/>
+
+
+    </Grid>
+</Window>

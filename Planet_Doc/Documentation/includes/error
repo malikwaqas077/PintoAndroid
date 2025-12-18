@@ -1,0 +1,133 @@
+<h1 id='errors'>Errors</h1>
+<p>Various method return an <em>ErrorType</em>, indicating if the method was executed successfully, or if it encountered an error</p>
+<h2 id='errors-errortype'>ErrorType</h2>
+<table><thead>
+<tr>
+<th>ErrorType</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>SUCCESS</td>
+<td>No error has occurred</td>
+</tr>
+<tr>
+<td>GENERIC_ERROR</td>
+<td>An error has occurred</td>
+</tr>
+<tr>
+<td>NETWORK_ERROR</td>
+<td>An error has occurred when trying to send data to the terminal</td>
+</tr>
+<tr>
+<td>TIMEOUT</td>
+<td>Integra was unable send a message because of channel timeout</td>
+</tr>
+<tr>
+<td>MISSING_PARAM</td>
+<td>A required option is missing</td>
+</tr>
+<tr>
+<td>INVALID_PARAM_CHANNEL_NAME</td>
+<td>The channel name was not recognized</td>
+</tr>
+<tr>
+<td>MISSING_PARAM_CHANNEL</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_CHANNEL</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_HOST</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_HOST</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_HOST_OR_IP</td>
+<td>Options need one of required parameters <a href="#channelfactory-options">KEY_HOST</a> or <a href="#channelfactory-options">KEY_IP</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_IP</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_IP</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_PORT</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_PORT</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_TIMEOUT</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_TIMEOUT</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_CIPHERS</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_CIPHERS</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_PROTOCOLS</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_PROTOCOLS</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_COMPORT</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_COMPORT</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_BAUD_RATE</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_BAUD_RATE</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_DATA_BITS</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_DATA_BITS</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_STOP_BITS</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_STOP_BITS</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_PARITY</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_PARITY</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_FLOW_CONTROL</td>
+<td>Options are missing required parameter <a href="#channelfactory-options">KEY_FLOW_CONTROL</a></td>
+</tr>
+<tr>
+<td>INVALID_PARAM_DATALINK_NAME</td>
+<td>The datalink name was not recognized</td>
+</tr>
+<tr>
+<td>MISSING_PARAM_DATALINK</td>
+<td>Options are missing required parameter <a href="#datalinkfactory-options">KEY_DATALINK</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_ACK_TIMEOUT</td>
+<td>Options are missing required parameter <a href="#datalinkfactory-options">KEY_ACK_TIMEOUT</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_ACK_MAX_RETRIES</td>
+<td>Options are missing required parameter <a href="#datalinkfactory-options">KEY_ACK_MAX_RETRIES</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_KEEP_ALIVE_INTERVAL</td>
+<td>Options are missing required parameter <a href="#datalinkfactory-options">KEY_KEEP_ALIVE_INTERVAL</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_DUPLICATE_CHECK</td>
+<td>Options are missing required parameter <a href="#datalinkfactory-options">KEY_DUPLICATE_CHECK</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_MASK_NON_ASCII</td>
+<td>Options are missing required parameter <a href="#datalinkfactory-options">KEY_MASK_NON_ASCII</a></td>
+</tr>
+<tr>
+<td>MISSING_PARAM_SYN_BYTES</td>
+<td>Options are missing required parameter <a href="#datalinkfactory-options">KEY_SYN_BYTES</a></td>
+</tr>
+</tbody></table>
+<h2 id='errors-errortypetostring'>errorTypeToString</h2><div class="highlight"><pre class="highlight cpp tab-cpp"><code><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">errorName</span> <span class="o">=</span> <span class="n">Error</span><span class="o">::</span><span class="n">errorTypeToString</span><span class="p">(</span><span class="n">ErrorType</span><span class="o">::</span><span class="n">SUCCESS</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight java tab-java"><code><span class="nc">String</span> <span class="n">errorName</span> <span class="o">=</span> <span class="nc">Error</span><span class="o">.</span><span class="na">errorTypeToString</span><span class="o">(</span><span class="nc">ErrorType</span><span class="o">.</span><span class="na">SUCCESS</span><span class="o">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight csharp tab-csharp"><code><span class="kt">string</span> <span class="n">errorName</span> <span class="p">=</span> <span class="n">Error</span><span class="p">.</span><span class="nf">errorTypeToString</span><span class="p">(</span><span class="n">ErrorType</span><span class="p">.</span><span class="n">SUCCESS</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="highlight swift tab-swift"><code><span class="k">let</span> <span class="nv">errorName</span><span class="p">:</span><span class="kt">String</span> <span class="o">=</span> <span class="kt">PPError</span><span class="o">.</span><span class="nf">errorTypeToString</span><span class="p">(</span><span class="nv">errorType</span><span class="p">:</span> <span class="kt">PPErrorType</span><span class="o">.</span><span class="kt">SUCCESS</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="highlight objective_c tab-objective_c"><code><span class="n">NSString</span> <span class="o">*</span><span class="n">errorName</span> <span class="o">=</span> <span class="p">[</span><span class="n">PPError</span> <span class="nf">errorTypeToString</span><span class="p">:</span><span class="n">PPErrorType</span><span class="p">.</span><span class="n">SUCCESS</span><span class="p">];</span>
+</code></pre></div>
+<blockquote>
+<p><em>errorName</em> contains the value &quot;SUCCESS&quot;</p>
+</blockquote>
+
+<p><em>errorTypeToString</em> converts an <em>ErrorType</em> to a string containing its value  </p>

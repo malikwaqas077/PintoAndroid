@@ -21,3 +21,6 @@ app/release/*.apk
 app/release/baselineProfiles/**
 
 pinto.jks
+
+# Mock server dependencies
+mock-server/node_modules/
