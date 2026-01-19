@@ -1,0 +1,10 @@
+Fix ANR crash on non-Planet devices when Planet SDK is unavailable
+
+- Made SDK initialization asynchronous to prevent UI thread blocking
+- Added SDK availability detection with graceful error handling
+- Added checks in payment operations to verify SDK availability before use
+- Enhanced error handling to catch native crashes when SDK libraries are missing
+
+Backward compatible: No impact on Planet POS/IM30 devices. On non-Planet 
+devices, app now starts normally with payment features gracefully disabled.
+

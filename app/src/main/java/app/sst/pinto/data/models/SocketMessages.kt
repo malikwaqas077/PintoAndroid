@@ -36,7 +36,32 @@ data class MessageData(
     @Json(name = "remaining") val remaining: Int? = null,
 
     // QR code information
-    @Json(name = "paymentUrl") val paymentUrl: String? = null
+    @Json(name = "paymentUrl") val paymentUrl: String? = null,
+    
+    // Device configuration fields (from server DEVICE_INFO message)
+    @Json(name = "minTransactionLimit") val minTransactionLimit: Double? = null,
+    @Json(name = "maxTransactionLimit") val maxTransactionLimit: Double? = null,
+    @Json(name = "transactionFeeType") val transactionFeeType: String? = null,
+    @Json(name = "transactionFeeValue") val transactionFeeValue: Double? = null,
+    @Json(name = "yaspaEnabled") val yaspaEnabled: Boolean? = null,
+    @Json(name = "paymentProvider") val paymentProvider: String? = null,
+    @Json(name = "requireCardReceipt") val requireCardReceipt: Boolean? = null,
+    
+    // Card check result fields
+    @Json(name = "cardToken") val cardToken: String? = null,
+    
+    // Device information request fields
+    @Json(name = "requestType") val requestType: String? = null,
+    @Json(name = "deviceIpAddress") val deviceIpAddress: String? = null,
+    @Json(name = "deviceSerialNumber") val deviceSerialNumber: String? = null,
+    
+    // Payment result fields (for PAYMENT_RESULT and REVERSAL_RESULT)
+    @Json(name = "paymentDetails") val paymentDetails: Map<String, String>? = null,
+    
+    // Refund/Reversal request fields
+    @Json(name = "originalTransactionId") val originalTransactionId: String? = null,
+    @Json(name = "originalRequesterTransRefNum") val originalRequesterTransRefNum: String? = null,
+    @Json(name = "reversalAmount") val reversalAmount: Int? = null
 )
 
 // Screen states for the app
@@ -72,6 +97,11 @@ sealed class PaymentScreenState {
 
     object Processing : PaymentScreenState()
     object Timeout : PaymentScreenState()  // ← ADD THIS LINE
+
+    data class MockPaymentCard(
+        val amount: Int,
+        val currency: String
+    ) : PaymentScreenState()
 
     data class TransactionSuccess(val showReceipt: Boolean) : PaymentScreenState()
 

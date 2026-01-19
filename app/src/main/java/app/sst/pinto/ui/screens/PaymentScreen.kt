@@ -23,19 +23,111 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import app.sst.pinto.R
 import app.sst.pinto.data.models.PaymentScreenState
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalGlideComposeApi::class)
+/**
+ * Animated PNG image component using Coil.
+ * Supports APNG (Animated PNG) format automatically if the PNG file is in APNG format.
+ * Also adds a subtle pulsing animation for visual appeal.
+ * 
+ * Note: Android resources will automatically use the PNG file if both .gif and .png
+ * exist with the same name. PNG files are preferred over GIFs.
+ */
+@Composable
+fun AnimatedPngImage(
+    imageResId: Int,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    enablePulseAnimation: Boolean = true
+) {
+    val context = LocalContext.current
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+    
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.9f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+    
+    // Calculate maximum size based on screen dimensions to prevent GL out of memory
+    val density = LocalDensity.current
+    val maxSize = remember(context) {
+        val displayMetrics = context.resources.displayMetrics
+        // Use screen width as maximum dimension (most displays are landscape for payment terminals)
+        // Cap at 1024px to prevent excessive memory usage even on large displays
+        val screenWidth = displayMetrics.widthPixels.coerceAtMost(1024)
+        val screenHeight = displayMetrics.heightPixels.coerceAtMost(1024)
+        // Use the larger dimension, but cap at 1024 to be safe
+        screenWidth.coerceAtLeast(screenHeight).coerceAtMost(1024)
+    }
+    
+    // #region agent log
+    LaunchedEffect(imageResId, maxSize) {
+        try {
+            val logData = """{"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"PaymentScreen.kt:92","message":"AnimatedPngImage loading with size constraints","data":{"imageResId":$imageResId,"maxSize":$maxSize,"screenWidth":${context.resources.displayMetrics.widthPixels},"screenHeight":${context.resources.displayMetrics.heightPixels}},"timestamp":${System.currentTimeMillis()}}"""
+            java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
+        } catch (e: Exception) {}
+    }
+    // #endregion
+    
+    AsyncImage(
+        model = ImageRequest.Builder(context)
+            .data(imageResId)
+            // Add size constraints to prevent loading full-resolution images into memory
+            // This is critical for preventing GL out of memory errors
+            // Coil will resize the image to fit within this size before loading into memory
+            .size(maxSize)
+            // Disable hardware bitmaps for animated images to reduce GPU memory pressure
+            .allowHardware(false)
+            // Use memory cache efficiently
+            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+            .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+            .build(),
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Fit,
+        modifier = modifier
+            .then(
+                if (enablePulseAnimation) {
+                    Modifier
+                        .scale(pulseScale)
+                        .alpha(pulseAlpha)
+                } else {
+                    Modifier
+                }
+            )
+    )
+}
+
 @Composable
 fun CollectTicketScreen() {
     Column(
@@ -49,11 +141,12 @@ fun CollectTicketScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Changed to payment_terminal.gif
-        GlideImage(
-            model = R.raw.payment_terminal,
+        // Using animated PNG
+        AnimatedPngImage(
+            imageResId = R.raw.payment_terminal,
             contentDescription = "Collect Ticket",
-            modifier = Modifier.size(240.dp)
+            modifier = Modifier.size(240.dp),
+            enablePulseAnimation = true
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -79,9 +172,18 @@ fun CollectTicketScreen() {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun ThankYouScreen() {
+    val context = LocalContext.current
+    // #region agent log
+    LaunchedEffect(Unit) {
+        try {
+            val logData = """{"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"PaymentScreen.kt:165","message":"ThankYouScreen composed","data":{"screenWidth":${context.resources.displayMetrics.widthPixels},"screenHeight":${context.resources.displayMetrics.heightPixels}},"timestamp":${System.currentTimeMillis()}}"""
+            java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
+        } catch (e: Exception) {}
+    }
+    // #endregion
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -89,20 +191,54 @@ fun ThankYouScreen() {
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Logo at top
-        Image(
-            painter = painterResource(id = R.drawable.logo),
+        // Logo at top - using AsyncImage with size constraints to prevent GL out of memory
+        // #region agent log
+        LaunchedEffect(Unit) {
+            try {
+                val maxSize = context.resources.displayMetrics.widthPixels.coerceAtMost(512)
+                val logData = """{"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"PaymentScreen.kt:192","message":"Logo image loading with size constraints","data":{"imageResource":"R.drawable.logo","displaySize":"160.dp","maxDecodeSize":$maxSize},"timestamp":${System.currentTimeMillis()}}"""
+                java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
+            } catch (e: Exception) {}
+        }
+        // #endregion
+        // Use AsyncImage with size constraints instead of painterResource to prevent full-resolution decode
+        // This ensures the logo is decoded at an appropriate size before loading into GPU memory
+        val logoMaxSize = remember(context) {
+            val displayMetrics = context.resources.displayMetrics
+            // Calculate max size for logo: 160.dp * 2 for high DPI screens, capped at 512px
+            val density = displayMetrics.density
+            val targetSize = (160 * density * 2).toInt().coerceAtMost(512)
+            targetSize
+        }
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(R.drawable.logo)
+                .size(logoMaxSize) // Constrain decode size to prevent GL out of memory
+                .allowHardware(false) // Disable hardware bitmaps to reduce GPU memory pressure
+                .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                .build(),
             contentDescription = "Company Logo",
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .padding(top = 48.dp)
                 .size(160.dp)
         )
 
-        // Thank you animation
-        GlideImage(
-            model = R.raw.thankyou,
+        // Thank you animation - using animated PNG
+        // #region agent log
+        LaunchedEffect(Unit) {
+            try {
+                val logData = """{"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"PaymentScreen.kt:184","message":"ThankYou image loading started","data":{"imageResource":"R.raw.thankyou","displaySize":"240.dp"},"timestamp":${System.currentTimeMillis()}}"""
+                java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
+            } catch (e: Exception) {}
+        }
+        // #endregion
+        AnimatedPngImage(
+            imageResId = R.raw.thankyou,
             contentDescription = "Thank You Animation",
-            modifier = Modifier.size(240.dp)
+            modifier = Modifier.size(240.dp),
+            enablePulseAnimation = true
         )
 
         // Thank you text
@@ -191,7 +327,6 @@ fun DeviceErrorScreen(errorMessage: String) {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun ReceiptQuestionScreen(
     onResponseSelected: (Boolean) -> Unit
@@ -232,11 +367,12 @@ fun ReceiptQuestionScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Card image or animated GIF
-        GlideImage(
-            model = R.raw.receipt,
+        // Card image - using animated PNG
+        AnimatedPngImage(
+            imageResId = R.raw.receipt,
             contentDescription = "Card Receipt",
-            modifier = Modifier.size(120.dp)
+            modifier = Modifier.size(120.dp),
+            enablePulseAnimation = true
         )
 
         Spacer(modifier = Modifier.height(40.dp))
@@ -312,7 +448,6 @@ fun ReceiptQuestionScreen(
 }
 
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun TransactionFailedScreen(errorMessage: String?) {
     Column(
@@ -326,11 +461,12 @@ fun TransactionFailedScreen(errorMessage: String?) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Failed animation
-        GlideImage(
-            model = R.raw.failed,
+        // Failed animation - using animated PNG
+        AnimatedPngImage(
+            imageResId = R.raw.failed,
             contentDescription = "Transaction Failed",
-            modifier = Modifier.size(200.dp)
+            modifier = Modifier.size(200.dp),
+            enablePulseAnimation = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -431,7 +567,6 @@ fun LimitErrorScreen(errorMessage: String) {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun PrintingTicketScreen() {
     Column(
@@ -441,21 +576,16 @@ fun PrintingTicketScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AnimatedHeader(text = "Printing")
-
-        Text(
-            text = "Ticket",
-            fontSize = 22.sp,
-            textAlign = TextAlign.Center
-        )
+        AnimatedHeader(text = "Printing Ticket")
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Printing animation
-        GlideImage(
-            model = R.raw.ticket,
+        // Printing animation - using animated PNG
+        AnimatedPngImage(
+            imageResId = R.raw.ticket,
             contentDescription = "Printing Ticket",
-            modifier = Modifier.size(240.dp)
+            modifier = Modifier.size(240.dp),
+            enablePulseAnimation = true
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -542,6 +672,8 @@ fun PaymentScreen(
             )
             is PaymentScreenState.KeypadEntry -> KeypadEntryScreen(
                 currency = targetState.currency,
+                minAmount = targetState.minAmount,
+                maxAmount = targetState.maxAmount,
                 onAmountEntered = onAmountSelected
             )
             is PaymentScreenState.PaymentMethodSelect -> PaymentMethodScreen(
@@ -567,6 +699,11 @@ fun PaymentScreen(
             is PaymentScreenState.ThankYou -> ThankYouScreen()
             is PaymentScreenState.DeviceError -> DeviceErrorScreen(
                 errorMessage = targetState.errorMessage
+            )
+            is PaymentScreenState.MockPaymentCard -> MockPaymentCardScreen(
+                amount = targetState.amount,
+                currency = targetState.currency,
+                onCancel = onCancelPayment
             )
 
 
@@ -670,7 +807,6 @@ fun TimeoutScreen() {
         )
     }
 }
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun AmountSelectionScreen(
     amounts: List<Int>,
@@ -757,7 +893,6 @@ fun AmountButton(
         )
     }
 }
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun RefundProcessingScreen(errorMessage: String? = null) {
     Column(
@@ -772,9 +907,23 @@ fun RefundProcessingScreen(errorMessage: String? = null) {
         Spacer(modifier = Modifier.height(32.dp))
 
         // Processing animation - reuse the pending animation
-        GlideImage(
-            model = R.raw.pending,
+        val context = LocalContext.current
+        val maxSize = remember(context) {
+            val displayMetrics = context.resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels.coerceAtMost(1024)
+            val screenHeight = displayMetrics.heightPixels.coerceAtMost(1024)
+            screenWidth.coerceAtLeast(screenHeight).coerceAtMost(1024)
+        }
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(R.raw.pending)
+                .size(maxSize)
+                .allowHardware(false)
+                .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                .build(),
             contentDescription = "Processing Refund",
+            contentScale = ContentScale.Fit,
             modifier = Modifier.size(200.dp)
         )
 
@@ -1107,14 +1256,108 @@ fun PinKeypadButton(
         }
     }
 }
+/**
+ * Beautiful toast notification composable that appears at the top of the screen
+ */
+@Composable
+fun ErrorToast(
+    message: String,
+    visible: Boolean,
+    onDismiss: () -> Unit
+) {
+    val slideOffset by animateFloatAsState(
+        targetValue = if (visible) 0f else -200f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "toastSlide"
+    )
+    
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "toastAlpha"
+    )
+
+    // Auto-dismiss after 3 seconds
+    LaunchedEffect(visible) {
+        if (visible) {
+            delay(3000)
+            onDismiss()
+        }
+    }
+
+    if (visible || alpha > 0f) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(alpha)
+                .offset(y = (8.dp + slideOffset.dp))
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(0.9f),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_warning),
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun KeypadEntryScreen(
     currency: String,
+    minAmount: Int,
+    maxAmount: Int,
     onAmountEntered: (Int) -> Unit
 ) {
     val enteredAmount = remember { mutableStateOf("0") }
+    var showLimitError by remember { mutableStateOf(false) }
+    var limitErrorMessage by remember { mutableStateOf("") }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Error toast at the top - positioned absolutely
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .zIndex(1000f)
+        ) {
+            ErrorToast(
+                message = limitErrorMessage,
+                visible = showLimitError,
+                onDismiss = { showLimitError = false }
+            )
+        }
+        
         // Cancel button in top-left corner
         IconButton(
             onClick = {
@@ -1187,6 +1430,8 @@ fun KeypadEntryScreen(
                             text = number.toString(),
                             modifier = Modifier.weight(1f),
                             onClick = {
+                                // Clear error when user starts typing
+                                showLimitError = false
                                 enteredAmount.value = if (enteredAmount.value == "0") {
                                     number.toString()
                                 } else {
@@ -1207,6 +1452,8 @@ fun KeypadEntryScreen(
                             text = number.toString(),
                             modifier = Modifier.weight(1f),
                             onClick = {
+                                // Clear error when user starts typing
+                                showLimitError = false
                                 enteredAmount.value = if (enteredAmount.value == "0") {
                                     number.toString()
                                 } else {
@@ -1227,6 +1474,8 @@ fun KeypadEntryScreen(
                             text = number.toString(),
                             modifier = Modifier.weight(1f),
                             onClick = {
+                                // Clear error when user starts typing
+                                showLimitError = false
                                 enteredAmount.value = if (enteredAmount.value == "0") {
                                     number.toString()
                                 } else {
@@ -1248,6 +1497,8 @@ fun KeypadEntryScreen(
                         backgroundColor = Color.Red.copy(alpha = 0.7f),
                         modifier = Modifier.weight(1f),
                         onClick = {
+                            // Clear error when clearing amount
+                            showLimitError = false
                             enteredAmount.value = "0"
                         }
                     )
@@ -1257,6 +1508,8 @@ fun KeypadEntryScreen(
                         text = "0",
                         modifier = Modifier.weight(1f),
                         onClick = {
+                            // Clear error when user starts typing
+                            showLimitError = false
                             if (enteredAmount.value != "0") {
                                 enteredAmount.value += "0"
                             }
@@ -1271,7 +1524,21 @@ fun KeypadEntryScreen(
                         onClick = {
                             enteredAmount.value.toIntOrNull()?.let { amount ->
                                 if (amount > 0) {
-                                    onAmountEntered(amount)
+                                    // Validate against min/max limits
+                                    if (amount < minAmount) {
+                                        showLimitError = true
+                                        limitErrorMessage = "Minimum transaction limit is $currency$minAmount"
+                                        // Reset amount to 0 after showing error
+                                        enteredAmount.value = "0"
+                                    } else if (amount > maxAmount) {
+                                        showLimitError = true
+                                        limitErrorMessage = "Maximum transaction limit is $currency$maxAmount"
+                                        // Reset amount to 0 after showing error
+                                        enteredAmount.value = "0"
+                                    } else {
+                                        showLimitError = false
+                                        onAmountEntered(amount)
+                                    }
                                 }
                             }
                         }
@@ -1353,7 +1620,6 @@ fun KeypadButton(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun PaymentMethodScreen(
     methods: List<String>,
@@ -1452,7 +1718,6 @@ fun PaymentMethodButton(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun QrCodeScreen(
     onCancel: () -> Unit
@@ -1516,7 +1781,184 @@ fun QrCodeScreen(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun MockPaymentCardScreen(
+    amount: Int,
+    currency: String,
+    onCancel: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Header with progress indicator
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Progress indicator - green segment on left, gray segments on right
+                Row(
+                    modifier = Modifier
+                        .width(200.dp)
+                        .height(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .background(Color.Green)
+                    )
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(Color.Gray)
+                        )
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        // Main content area
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Large contactless payment icon
+            AnimatedPngImage(
+                imageResId = R.raw.tap_card,
+                contentDescription = "Contactless Payment",
+                modifier = Modifier.size(200.dp),
+                enablePulseAnimation = true
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Amount display
+            Text(
+                text = "$currency${String.format("%.2f", amount.toDouble())}",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Instruction text
+            Text(
+                text = "Insert, swipe or present card",
+                fontSize = 20.sp,
+                color = Color.Black,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Three payment method icons in a row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Chip insert icon (circular placeholder)
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(Color.LightGray, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "●",
+                        fontSize = 32.sp,
+                        color = Color.Black
+                    )
+                }
+                
+                // Swipe icon (circular placeholder)
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(Color.LightGray, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "●",
+                        fontSize = 32.sp,
+                        color = Color.Black
+                    )
+                }
+                
+                // Contactless icon (circular placeholder)
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(Color.LightGray, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "●",
+                        fontSize = 32.sp,
+                        color = Color.Black
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        // Cancel button at bottom (non-clickable but same orange color)
+        Button(
+            onClick = { /* Disabled - button is not clickable */ },
+            enabled = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF6600), // Orange color
+                disabledContainerColor = Color(0xFFFF6600) // Keep orange when disabled
+            ),
+            shape = RoundedCornerShape(0.dp) // Full width button
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "✕",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Cancel",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun ProcessingScreen() {
     Column(
@@ -1526,15 +1968,16 @@ fun ProcessingScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AnimatedHeader(text = "Processing Payment")
+        AnimatedHeader(text = "Preparing Payment")
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Processing animation
-        GlideImage(
-            model = R.raw.pending,
-            contentDescription = "Processing Payment",
-            modifier = Modifier.size(200.dp)
+        // Processing animation - using animated PNG
+        AnimatedPngImage(
+            imageResId = R.raw.pending,
+            contentDescription = "Preparing Payment",
+            modifier = Modifier.size(200.dp),
+            enablePulseAnimation = true
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -1551,7 +1994,7 @@ fun ProcessingScreen() {
         )
 
         Text(
-            text = "Please wait while we process your payment...",
+            text = "Please wait while we are preparing your payment...",
             fontSize = 18.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.alpha(alpha)
@@ -1559,7 +2002,6 @@ fun ProcessingScreen() {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun TransactionSuccessScreen() {
     Column(
@@ -1573,11 +2015,12 @@ fun TransactionSuccessScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Success animation
-        GlideImage(
-            model = R.raw.accepted,
+        // Success animation - using animated PNG
+        AnimatedPngImage(
+            imageResId = R.raw.accepted,
             contentDescription = "Transaction Success",
-            modifier = Modifier.size(200.dp)
+            modifier = Modifier.size(200.dp),
+            enablePulseAnimation = true
         )
 
         Spacer(modifier = Modifier.height(24.dp))

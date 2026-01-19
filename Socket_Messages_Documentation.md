@@ -31,7 +31,7 @@ All messages follow this standard JSON structure:
 
 ```json
 {
-    "messageType": "[SCREEN_CHANGE | USER_ACTION | ERROR | STATUS_UPDATE | DEVICE_INFO | RESTART_APP | CARD_CHECK_RESULT | PAYMENT_RESULT | LIMIT_CHECK_RESULT]",
+    "messageType": "[SCREEN_CHANGE | USER_ACTION | ERROR | STATUS_UPDATE | DEVICE_INFO | RESTART_APP | CARD_CHECK_RESULT | PAYMENT_RESULT | LIMIT_CHECK_RESULT | REFUND_REQUEST | REVERSAL_REQUEST | REVERSAL_RESULT]",
     "screen": "[SCREEN_IDENTIFIER]",
     "data": {
         // Optional data specific to the screen or action
@@ -82,6 +82,7 @@ The `data` object can contain the following fields (all optional, depending on m
 - `transactionFeeValue`: Double - Fee value (fixed amount or percentage)
 - `yaspaEnabled`: Boolean - Payment flow control flag
 - `paymentProvider`: String - Payment provider to use: "integra" (real Planet/Integra terminal) or "mock" (simulated payments)
+- `requireCardReceipt`: Boolean - If `true`, shows receipt question screen after successful payment. If `false`, automatically responds NO without showing the screen. Defaults to `true`.
 
 ---
 
@@ -96,6 +97,8 @@ The `data` object can contain the following fields (all optional, depending on m
 - **CARD_CHECK_RESULT**: Client sends card check result (token) to server for daily limit validation
 - **PAYMENT_RESULT**: Client sends payment result from local Planet SDK to server
 - **LIMIT_CHECK_RESULT**: Server responds to card check with limit validation result (APPROVED/REJECTED)
+- **REFUND_REQUEST** / **REVERSAL_REQUEST**: Server requests client to refund/reverse a previously successful sale transaction
+- **REVERSAL_RESULT**: Client sends refund/reversal result back to server
 
 
 ## Screen Identifier Values
@@ -122,6 +125,7 @@ The `data` object can contain the following fields (all optional, depending on m
 - **RESET**: Client requests to reset/return to amount selection
 - **CANCEL**: Client cancels current transaction
 - **RECEIPT_RESPONSE**: Client responds to receipt question (YES/NO)
+- **MOCK_PAYMENT_CARD**: Mock payment card screen (shown for mock payment provider only)
 
 
 ## Client vs Server Controlled Screens
@@ -161,6 +165,11 @@ These screens are shown automatically by the client without requiring server mes
    - After 4 seconds, client automatically requests initial screen from server
    - Server doesn't need to send FAILED screen
 
+8. **REFUND_PROCESSING** - Shown automatically when REVERSAL_REQUEST is received
+   - Client shows refund processing screen when server sends refund/reversal request
+   - Client handles complete refund flow independently (processing → success/failure → requestInitialScreen)
+   - Server does NOT need to send REFUND_PROCESSING screen
+
 ### Server-Controlled Screens
 
 These screens require server messages to be displayed:
@@ -168,12 +177,11 @@ These screens require server messages to be displayed:
 1. **AMOUNT_SELECT** - Initial amount selection (server sends on connection)
 2. **RECEIPT_QUESTION** - Ask user if they want a receipt
 3. **PRINT_TICKET** - Printing ticket screen
-4. **COLLECT_TICKET** - Collect printed ticket screen
-5. **THANK_YOU** - Final thank you screen
-6. **REFUND_PROCESSING** - Refund processing screen
-7. **QR_CODE** - QR code payment screen
-8. **DEVICE_ERROR** - Terminal error (server can send)
-9. **PRINTER_ERROR** - Printer error (server can send)
+4. **COLLECT_TICKET** - Collect printed ticket screen (only if printing succeeds)
+5. **THANK_YOU** - Final thank you screen (only if no refund occurs)
+6. **QR_CODE** - QR code payment screen
+7. **DEVICE_ERROR** - Terminal error (server can send)
+8. **PRINTER_ERROR** - Printer error (server can send)
 
 ### Hybrid Flow
 
@@ -506,7 +514,7 @@ If daily spending limit exceeds, server sends:
 
 # 8. Ticket Printing 
 
-For ticket printing, server sends:
+After user responds to receipt question, server sends:
 
 ```json
 {
@@ -518,10 +526,22 @@ For ticket printing, server sends:
 }
 ```
 
+**Important:** After PRINT_TICKET is sent, the flow depends on whether printing succeeds or fails:
+
+- **If printing succeeds:** Server sends COLLECT_TICKET → THANK_YOU → AMOUNT_SELECT
+- **If printing fails AND auto-refund is enabled:** Server sends REVERSAL_REQUEST (skip COLLECT_TICKET and THANK_YOU)
+- **If printing fails AND auto-refund is disabled:** Server sends COLLECT_TICKET → THANK_YOU → AMOUNT_SELECT (normal flow continues)
+
+**Refund Flow (when printing fails):**
+- When auto-refund is enabled and printing fails, server sends REVERSAL_REQUEST instead of COLLECT_TICKET
+- Android app handles all refund screens independently (REFUND_PROCESSING → TransactionSuccess/TransactionFailed → requestInitialScreen)
+- Server does NOT send THANK_YOU when refund is triggered
+- See section 14 for details on refund/reversal flow
+
 
 ## 9. Collect Ticket
 
-After printing completes, server sends:
+After printing completes successfully, server sends:
 
 ```json
 {
@@ -533,10 +553,12 @@ After printing completes, server sends:
 }
 ```
 
+**Note:** This screen is only sent if printing succeeds. If printing fails and auto-refund is enabled, REVERSAL_REQUEST is sent instead (see section 14).
+
 
 ## 10. Receipt Question
 
-After successful payment, server can ask if user wants a receipt:
+After successful payment, server asks if user wants a receipt:
 
 ```json
 {
@@ -548,7 +570,11 @@ After successful payment, server can ask if user wants a receipt:
 }
 ```
 
-Client responds:
+**Important:** The client checks the `requireCardReceipt` configuration setting when receiving RECEIPT_QUESTION:
+- If `requireCardReceipt = true` (default): Client shows the receipt question screen and waits for user response
+- If `requireCardReceipt = false`: Client automatically responds NO without showing the screen
+
+Client responds (when `requireCardReceipt = true`):
 
 ```json
 {
@@ -576,21 +602,27 @@ Or:
 }
 ```
 
+**Note:** When `requireCardReceipt = false`, the client automatically sends a RECEIPT_RESPONSE with `selectionMethod: "NO"` without displaying the screen to the user.
+
+**Post-Receipt Flow:**
+After RECEIPT_RESPONSE is received, server sends PRINT_TICKET. The subsequent flow depends on printing success:
+- **If printing succeeds:** PRINT_TICKET → COLLECT_TICKET → THANK_YOU → AMOUNT_SELECT
+- **If printing fails AND auto-refund enabled:** PRINT_TICKET → REVERSAL_REQUEST → (Android handles refund screens) → AMOUNT_SELECT
+- **If printing fails AND auto-refund disabled:** PRINT_TICKET → COLLECT_TICKET → THANK_YOU → AMOUNT_SELECT (normal flow continues)
+
 ## 10.1 Refund Processing
 
-If payment succeeds but printer fails, server sends:
+**Important:** Refund processing is now handled entirely by the Android app when printing fails. The server does NOT send REFUND_PROCESSING screen.
 
-```json
-{
-    "messageType": "SCREEN_CHANGE",
-    "screen": "REFUND_PROCESSING",
-    "data": {
-        "errorMessage": "Printer error occurred"
-    },
-    "transactionId": "T123456",
-    "timestamp": 1619456799000
-}
-```
+**Flow when printing fails:**
+1. Server sends PRINT_TICKET screen
+2. If printing fails AND auto-refund is enabled, server sends REVERSAL_REQUEST (see section 14)
+3. Android app automatically shows REFUND_PROCESSING screen locally
+4. Android app processes reversal via Planet SDK
+5. Android app shows TransactionSuccess or TransactionFailed screen
+6. Android app calls requestInitialScreen() to return to amount selection
+
+**Note:** The REFUND_PROCESSING screen is client-controlled and shown automatically when REVERSAL_REQUEST is received. Server does not need to send this screen.
 
 ## 10.2 QR Code Payment
 
@@ -640,7 +672,7 @@ If printer has an error, server sends:
 
 ## 11. Thank You Screen
 
-Final screen in the flow, server sends:
+Final screen in the flow (only sent if no refund occurs), server sends:
 
 ```json
 {
@@ -651,6 +683,11 @@ Final screen in the flow, server sends:
     "timestamp": 1619456799000
 }
 ```
+
+**Important:** 
+- THANK_YOU is only sent if printing succeeds (normal flow: PRINT_TICKET → COLLECT_TICKET → THANK_YOU)
+- If printing fails and auto-refund is enabled, server sends REVERSAL_REQUEST instead and does NOT send THANK_YOU
+- Android app handles refund screens independently and calls requestInitialScreen() after refund completes
 
 
 # 11. Device Error 
@@ -796,7 +833,8 @@ The server can send device configuration to the client using DEVICE_INFO message
         "transactionFeeType": "FIXED",
         "transactionFeeValue": 0.50,
         "yaspaEnabled": true,
-        "paymentProvider": "integra"
+        "paymentProvider": "integra",
+        "requireCardReceipt": true
     },
     "transactionId": "config-1765208631832",
     "timestamp": 1765208631832
@@ -813,6 +851,7 @@ The server can send device configuration to the client using DEVICE_INFO message
 - **data.transactionFeeValue**: Fee value (Double) - fixed amount or percentage
 - **data.yaspaEnabled**: Boolean - if `false`, shows timeout screen then direct payment; if `true`, shows payment method selection
 - **data.paymentProvider**: String - Payment provider to use: `"integra"` (real Planet/Integra terminal) or `"mock"` (simulated payments). Defaults to `"integra"` if not provided.
+- **data.requireCardReceipt**: Boolean - If `true`, shows receipt question screen after successful payment. If `false`, automatically responds NO without showing the screen. Defaults to `true` if not provided.
 - **transactionId**: Unique identifier for this configuration update
 - **timestamp**: Unix timestamp in milliseconds
 
@@ -824,8 +863,9 @@ The server can send device configuration to the client using DEVICE_INFO message
   - Determining payment flow (yaspaEnabled flag)
   - Displaying currency symbol
   - Selecting payment provider (integra vs mock)
+  - Controlling receipt question behavior (requireCardReceipt flag)
 - Configuration persists across app restarts
-- If configuration is missing, client uses default values (min: 10, max: 300, currency: GBP, yaspaEnabled: true, paymentProvider: "integra")
+- If configuration is missing, client uses default values (min: 10, max: 300, currency: GBP, yaspaEnabled: true, paymentProvider: "integra", requireCardReceipt: true)
 
 **Payment Provider Behavior:**
 - **`paymentProvider = "integra"`**: Client uses real Planet Integra Client SDK for payment processing. All payment operations (CardCheckEmv, Sale, Cancel) are performed on the actual payment terminal hardware.
@@ -833,6 +873,8 @@ The server can send device configuration to the client using DEVICE_INFO message
   - Mock payments simulate successful transactions for all amounts except 101.00
   - Amount 101.00 triggers a daily limit exceeded error in mock mode
   - Mock responses include realistic delays and response structures matching the real Integra SDK
+  - For mock payments, client shows a special MOCK_PAYMENT_CARD screen after the PROCESSING screen (displays "Insert, swipe or present card" with amount)
+  - Mock payment flow: PROCESSING → MOCK_PAYMENT_CARD (3 seconds) → CardCheckEmv → Sale → SUCCESS/FAILED
 
 **Transaction Fee Calculation:**
 - If `transactionFeeType = "FIXED"`: Final amount = selected amount + transactionFeeValue
@@ -997,7 +1039,8 @@ When the client receives a DEVICE_INFO message with configuration data (minTrans
 - Uses configuration for local validation and fee calculation
 - Applies yaspaEnabled flag to determine payment flow
 - Uses paymentProvider to select between real Integra SDK or mock payment manager
-- Payment provider setting is displayed in the Settings screen
+- Uses requireCardReceipt flag to control receipt question screen behavior
+- Payment provider and receipt settings are displayed in the Settings screen
 
 **Permissions Required:**
 - `READ_PHONE_STATE`: Required for serial number access on Android 10+ (API 29+)
@@ -1026,13 +1069,14 @@ The client performs local payment processing using either the Planet Integra Cli
 **Payment Flow (DEBIT_CARD and PAY_BY_BANK):**
 1. **Client-controlled:** User selects payment method (shown locally)
 2. **Client-controlled:** Client shows PROCESSING screen automatically
-3. **Client-controlled:** Client performs CardCheckEmv locally (via Planet SDK)
-4. **Client → Server:** Client sends CARD_CHECK_RESULT with card token
-5. **Server → Client:** Server responds with LIMIT_CHECK_RESULT (APPROVED/REJECTED)
-6. **Client-controlled:** If approved, client performs Sale transaction locally
-7. **Client-controlled:** Client shows SUCCESS or FAILED screen immediately based on result
-8. **Client → Server:** Client sends PAYMENT_RESULT (informational - client already showed result)
-9. **Server-controlled:** Server sends post-payment screens (RECEIPT_QUESTION, PRINT_TICKET, THANK_YOU)
+3. **For mock payments only:** Client shows MOCK_PAYMENT_CARD screen (3 seconds) after PROCESSING
+4. **Client-controlled:** Client performs CardCheckEmv locally (via Planet SDK or MockPaymentManager)
+5. **Client → Server:** Client sends CARD_CHECK_RESULT with card token (skipped for mock payments)
+6. **Server → Client:** Server responds with LIMIT_CHECK_RESULT (APPROVED/REJECTED) - skipped for mock payments
+7. **Client-controlled:** If approved, client performs Sale transaction locally
+8. **Client-controlled:** Client shows SUCCESS or FAILED screen immediately based on result
+9. **Client → Server:** Client sends PAYMENT_RESULT (informational - client already showed result)
+10. **Server-controlled:** Server sends post-payment screens (RECEIPT_QUESTION, PRINT_TICKET, THANK_YOU)
 
 **Key Points:**
 - Client handles all payment processing screens locally (PROCESSING, SUCCESS, FAILED)
@@ -1045,7 +1089,124 @@ The client performs local payment processing using either the Planet Integra Cli
 - Final amount (with fee) is sent to server
 - Original amount is displayed to user, final amount is charged
 
-## 14. App Restart Message
+## 14. Refund/Reversal Request
+
+The server can request the client to refund/reverse a previously successful sale transaction. This is primarily used when:
+- **Ticket printing fails** after a successful payment (auto-refund scenario)
+- A sale transaction succeeded on the terminal but the server couldn't process it
+- A refund needs to be issued for a completed transaction
+- A transaction needs to be reversed due to errors or customer requests
+
+### 14.1 Server Request for Refund/Reversal
+
+The server sends a REFUND_REQUEST or REVERSAL_REQUEST message:
+
+```json
+{
+    "messageType": "REVERSAL_REQUEST",
+    "screen": "",
+    "data": {
+        "originalTransactionId": "T123456",
+        "originalRequesterTransRefNum": "T123456",
+        "reversalAmount": 61
+    },
+    "transactionId": "REVERSAL_T123456",
+    "timestamp": 1619456800000
+}
+```
+
+**Message Details:**
+- **messageType**: `"REFUND_REQUEST"` or `"REVERSAL_REQUEST"` - both are handled the same way
+- **screen**: Empty string (not used for refund requests)
+- **data.originalTransactionId**: Optional - transaction ID of the original sale (if not provided, uses last successful sale)
+- **data.originalRequesterTransRefNum**: Optional - RequesterTransRefNum from original sale (if not provided, uses last successful sale)
+- **data.reversalAmount**: Optional - amount to reverse in cents/pence (if not provided, uses last successful sale amount)
+- **transactionId**: Unique identifier for this reversal request (typically prefixed with "REVERSAL_")
+- **timestamp**: Unix timestamp in milliseconds
+
+**When Refund is Triggered:**
+- **Auto-refund scenario:** After PRINT_TICKET is sent, if printing fails AND auto-refund is enabled, server automatically sends REVERSAL_REQUEST
+- **Manual refund:** Server can send REVERSAL_REQUEST at any time (e.g., via UI button in mock server)
+- **Flow:** PRINT_TICKET → (printing fails) → REVERSAL_REQUEST (skip COLLECT_TICKET and THANK_YOU)
+
+**Client Behavior:**
+- Client checks if there's a last successful sale transaction stored
+- If no successful sale is found, client sends REVERSAL_RESULT with error
+- **Client automatically shows REFUND_PROCESSING screen** (no server message needed)
+- Client performs SaleReversalRequest via Planet SDK (or mock reversal)
+- Client sends REVERSAL_RESULT back to server
+- **Client shows TransactionSuccess or TransactionFailed screen** (no server message needed)
+- **Client automatically calls requestInitialScreen()** after showing result (3 seconds for success, 4 seconds for failure)
+- If reversal succeeds, client clears the stored successful sale transaction
+
+**Important Notes:**
+- **Android app handles all refund screens independently** - server does NOT send REFUND_PROCESSING, SUCCESS, FAILED, or THANK_YOU screens during refund flow
+- Server should NOT send COLLECT_TICKET or THANK_YOU when refund is triggered
+- After refund completes, Android app automatically requests initial screen (AMOUNT_SELECT) from server
+
+### 14.2 Client Response - Reversal Result
+
+After processing the reversal, client sends:
+
+```json
+{
+    "messageType": "REVERSAL_RESULT",
+    "screen": "SUCCESS",
+    "data": {
+        "errorCode": null,
+        "errorMessage": null,
+        "paymentDetails": {
+            "Result": "A",
+            "BankResultCode": "00",
+            "Message": "REVERSAL_APPROVED",
+            "RequesterTransRefNum": "REVERSAL_T123456",
+            "OriginalRequesterTransRefNum": "T123456"
+        },
+        "originalTransactionId": "T123456",
+        "reversalAmount": 61
+    },
+    "transactionId": "REVERSAL_T123456",
+    "timestamp": 1619456801000
+}
+```
+
+Or if reversal failed:
+
+```json
+{
+    "messageType": "REVERSAL_RESULT",
+    "screen": "FAILED",
+    "data": {
+        "errorCode": "NO_SALE_FOUND",
+        "errorMessage": "No successful sale transaction found to reverse",
+        "paymentDetails": {}
+    },
+    "transactionId": "REVERSAL_T123456",
+    "timestamp": 1619456801000
+}
+```
+
+**Message Details:**
+- **messageType**: `"REVERSAL_RESULT"`
+- **screen**: `"SUCCESS"` or `"FAILED"`
+- **data.errorCode**: Error code if reversal failed (null if successful)
+- **data.errorMessage**: Error message if reversal failed (null if successful)
+- **data.paymentDetails**: Raw payment details from Planet SDK (same structure as PAYMENT_RESULT)
+- **data.originalTransactionId**: Transaction ID of the original sale that was reversed
+- **data.reversalAmount**: Amount that was reversed
+- **transactionId**: Same transactionId from the reversal request
+- **timestamp**: Unix timestamp in milliseconds
+
+**Important Notes:**
+- Client automatically tracks the last successful sale transaction
+- If server doesn't provide originalTransactionId or reversalAmount, client uses the last successful sale
+- Reversal uses SaleReversalRequest from Planet SDK (same-day reversal)
+- After successful reversal, the stored successful sale is cleared
+- If no successful sale exists, client responds with error immediately
+- **All refund screens are client-controlled** - server only sends REVERSAL_REQUEST, Android app handles the rest
+- **Server does NOT send THANK_YOU when refund is triggered** - Android app manages the complete refund flow
+
+## 15. App Restart Message
 
 The server can instruct the client to restart the application by sending a RESTART_APP message. This is useful for applying configuration changes, recovering from errors, or performing maintenance operations. When the app is closed, kiosk mode will automatically reopen it.
 
@@ -1086,13 +1247,16 @@ The server can instruct the client to restart the application by sending a RESTA
 - **CARD_CHECK_RESULT**: Client sends card token to server for daily limit validation
 - **PAYMENT_RESULT**: Client sends local payment result to server
 - **LIMIT_CHECK_RESULT**: Server responds to card check with approval/rejection
+- **REFUND_REQUEST** / **REVERSAL_REQUEST**: Server requests client to refund/reverse a previously successful sale transaction
+- **REVERSAL_RESULT**: Client sends refund/reversal result back to server
 
 ### New Screens
 - **TIMEOUT**: Timeout screen (shown before direct payment when yaspaEnabled=false)
-- **RECEIPT_QUESTION**: Ask user if they want a receipt
+- **RECEIPT_QUESTION**: Ask user if they want a receipt (can be auto-skipped if requireCardReceipt=false)
 - **REFUND_PROCESSING**: Processing refund after printer error
 - **QR_CODE**: Display QR code for payment
 - **PRINTER_ERROR**: Printer error condition
+- **MOCK_PAYMENT_CARD**: Mock payment card screen (shown for mock payment provider only)
 
 ### Local Payment Processing
 - Client performs CardCheckEmv and Sale transactions locally via Planet SDK
@@ -1112,10 +1276,11 @@ The server can instruct the client to restart the application by sending a RESTA
 
 ### Device Configuration
 - Server can send device configuration via DEVICE_INFO message
-- Configures transaction limits, fees, currency, payment flow behavior, and payment provider
+- Configures transaction limits, fees, currency, payment flow behavior, payment provider, and receipt question behavior
 - Client validates amounts and calculates fees locally
 - Configuration persists in local database
 - Payment provider can be set to "integra" (real terminal) or "mock" (simulated payments)
+- Receipt question can be enabled/disabled via `requireCardReceipt` flag (defaults to `true`)
 
 ### Transaction Fee Calculation
 - Supports FIXED and PERCENTAGE fee types
@@ -1132,6 +1297,25 @@ The server can instruct the client to restart the application by sending a RESTA
 - Automatic timeout handling with screensaver
 - Cancel and reset messages for transaction management
 - Refund processing for printer errors
+- Refund/reversal support for server-initiated transaction reversals
+
+### Refund/Reversal Support
+- Client automatically tracks last successful sale transaction
+- Server can request refund/reversal via REFUND_REQUEST or REVERSAL_REQUEST message
+- **Refund is triggered when ticket printing fails** (if auto-refund is enabled)
+- **Flow:** PRINT_TICKET → (printing fails) → REVERSAL_REQUEST → (Android handles refund screens) → requestInitialScreen()
+- Client performs SaleReversalRequest via Planet SDK (or mock reversal)
+- **Android app handles all refund screens independently** (REFUND_PROCESSING → TransactionSuccess/TransactionFailed)
+- Client sends REVERSAL_RESULT back to server with reversal status
+- **Server does NOT send THANK_YOU when refund is triggered** - Android app manages complete refund flow
+- Supports both real Planet terminal and mock payment provider
+
+### Receipt Question Control
+- `requireCardReceipt` configuration flag controls receipt question behavior
+- When `requireCardReceipt = true`: Client shows receipt question screen and waits for user response
+- When `requireCardReceipt = false`: Client automatically responds NO without showing the screen
+- Default value is `true` for backward compatibility
+- Setting is configurable via DEVICE_INFO message from server
 
 ---
 

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -9,10 +10,10 @@ android {
 
     defaultConfig {
         applicationId = "app.sst.pinto"
-        minSdk = 29
+        minSdk = 25
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -75,6 +76,7 @@ android {
 }
 
 dependencies {
+    implementation(files("libs/IntegrationSDK_release_1.0.10.aar"))
     // Add these to your existing dependencies block
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
@@ -83,9 +85,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
-    // Add to your dependencies block
-    implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
+    // Coil for image loading (replaced Glide)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-gif:2.5.0") // For GIF support (if needed)
+    // Coil automatically supports APNG (Animated PNG) format
 
     // ExoPlayer for video playback
     implementation ("androidx.media3:media3-exoplayer:1.2.0")
@@ -107,4 +110,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    
+    // Room database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 }

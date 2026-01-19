@@ -4,8 +4,11 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -24,19 +27,32 @@ class SocketManager private constructor() {
 
     private var webSocket: WebSocket? = null
     private var serverUrl: String = "ws://192.168.2.112:5001"
+    
+    // Coroutine scope for emitting messages
+    private val messageScope = CoroutineScope(Dispatchers.IO)
 
     // Connection state
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState
 
-    // Message receiver
-    private val _messageReceived = MutableStateFlow<String?>(null)
-    val messageReceived: StateFlow<String?> = _messageReceived
+    // Message receiver - use SharedFlow with buffer to queue all messages
+    // StateFlow only holds latest value, which can cause messages to be lost when they arrive quickly
+    private val _messageReceived = MutableSharedFlow<String>(
+        extraBufferCapacity = 64, // Buffer up to 64 messages
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.SUSPEND // Suspend if buffer is full
+    )
+    val messageReceived: SharedFlow<String> = _messageReceived.asSharedFlow()
 
     fun connect(url: String) {
         serverUrl = url
+        // Don't connect if already connected or connecting
         if (_connectionState.value == ConnectionState.CONNECTED) {
             Log.d(TAG, "Already connected")
+            return
+        }
+        
+        if (_connectionState.value == ConnectionState.CONNECTING) {
+            Log.d(TAG, "Connection already in progress, skipping duplicate connect request")
             return
         }
 
@@ -62,15 +78,20 @@ class SocketManager private constructor() {
      */
     fun ensureConnected() {
         Log.d(TAG, "Ensuring socket connection is active")
-        if (_connectionState.value != ConnectionState.CONNECTED) {
-            Log.d(TAG, "Not connected, attempting reconnection to $serverUrl")
-            connect(serverUrl)
-        } else {
-            Log.d(TAG, "Already connected to $serverUrl")
-
-            // Send a small ping message to verify connection is still alive
-            val pingSuccess = webSocket?.send("{\"ping\":true}")
-            Log.d(TAG, "Sent ping message, result: $pingSuccess")
+        when (_connectionState.value) {
+            ConnectionState.CONNECTED -> {
+                Log.d(TAG, "Already connected to $serverUrl")
+                // Send a small ping message to verify connection is still alive
+                val pingSuccess = webSocket?.send("{\"ping\":true}")
+                Log.d(TAG, "Sent ping message, result: $pingSuccess")
+            }
+            ConnectionState.CONNECTING -> {
+                Log.d(TAG, "Connection already in progress, waiting for it to complete")
+            }
+            ConnectionState.DISCONNECTED -> {
+                Log.d(TAG, "Not connected, attempting reconnection to $serverUrl")
+                connect(serverUrl)
+            }
         }
     }
 
@@ -97,7 +118,11 @@ class SocketManager private constructor() {
 
         override fun onMessage(webSocket: WebSocket, text: String) {
             Log.d(TAG, "Message received: $text")
-            _messageReceived.value = text
+            // Emit message in a coroutine scope to ensure thread safety
+            // tryEmit is non-blocking and thread-safe, but using emit in a coroutine is safer
+            messageScope.launch {
+                _messageReceived.emit(text)
+            }
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {

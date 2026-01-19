@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -37,6 +38,9 @@ import app.sst.pinto.config.ConfigManager
 import app.sst.pinto.ui.components.PressAndHoldDetector
 import app.sst.pinto.ui.screens.PinAuthScreen
 import app.sst.pinto.ui.screens.ServerConfigScreen
+import app.sst.pinto.ui.screens.SettingsScreen
+import android.content.Intent
+import android.net.Uri
 
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
@@ -50,6 +54,33 @@ class MainActivity : ComponentActivity() {
         // Initialize managers first
         timeoutManager = TimeoutManager.getInstance()
         configManager = ConfigManager.getInstance(applicationContext)
+        
+        // Initialize Planet SDK logger early (must be done before any SDK calls)
+        // This prevents native crashes that can occur if SDK is used before logger is initialized
+        // Run on background thread to avoid blocking UI thread, especially on non-Planet devices
+        app.sst.pinto.payment.PlanetPaymentManager.initializeLoggerAsync { isAvailable ->
+            if (isAvailable) {
+                Log.d(TAG, "Planet SDK is available on this device")
+                
+                // Initialize Integra instance early at app start for faster transactions
+                // This avoids initialization delay during payment processing
+                Thread {
+                    try {
+                        val success = app.sst.pinto.payment.PlanetPaymentManager.initializeIntegra()
+                        if (success) {
+                            Log.d(TAG, "Planet Integra initialized successfully at app start")
+                        } else {
+                            Log.w(TAG, "Planet Integra initialization deferred (will initialize on first transaction)")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error initializing Planet Integra at app start", e)
+                        // Non-fatal: will initialize lazily on first transaction
+                    }
+                }.start()
+            } else {
+                Log.w(TAG, "Planet SDK is not available on this device - payment features will be disabled")
+            }
+        }
 
         // Make the app fullscreen BEFORE setting content
         setupFullscreen()
@@ -146,6 +177,13 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy called")
+        // Clean up Planet SDK resources
+        try {
+            app.sst.pinto.payment.PlanetPaymentManager.cleanup()
+            Log.d(TAG, "Planet SDK resources cleaned up")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cleaning up Planet SDK resources", e)
+        }
     }
 }
 
@@ -161,6 +199,7 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
     // Server configuration state
     var showServerConfig by remember { mutableStateOf(configManager.isFirstLaunch()) }
     var showPinAuth by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var serverUrl by remember { mutableStateOf(configManager.getServerUrl()) }
 
     // Connect to backend only if we have a server URL
@@ -177,10 +216,32 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
                 PinAuthScreen(
                     onPinCorrect = {
                         showPinAuth = false
-                        showServerConfig = true
+                        showSettings = true
                     },
                     onCancel = {
                         showPinAuth = false
+                    }
+                )
+            }
+            showSettings -> {
+                // Show settings screen
+                SettingsScreen(
+                    context = LocalContext.current,
+                    onOpenServerConfig = {
+                        showSettings = false
+                        showServerConfig = true
+                    },
+                    onDownloadVideo = {
+                        // Implement video download if needed
+                        // For now, just log
+                        android.util.Log.d("MainActivity", "Download video requested")
+                    },
+                    onClose = {
+                        showSettings = false
+                    },
+                    onCloseApp = {
+                        // Close the app
+                        android.os.Process.killProcess(android.os.Process.myPid())
                     }
                 )
             }

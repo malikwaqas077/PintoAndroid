@@ -1,5 +1,298 @@
 # Pinto Android App - Release Notes
 
+## Version 2.0 (Build 2)
+
+**Release Date:** December 2025
+
+---
+
+## Overview
+
+This release introduces significant architectural improvements with enhanced local control, payment provider configuration, mock payment support, and comprehensive device configuration management. The app now operates more independently from the backend, reducing server dependencies and improving reliability.
+
+---
+
+## New Features
+
+### 1. Payment Provider Configuration
+
+**Dynamic Payment Provider Selection from Backend**
+
+- **Payment Provider Configuration**: The app now receives payment provider configuration from the backend controller via `DEVICE_INFO` message.
+- **Supported Providers**:
+  - **"integra"** (default): Uses real Planet Integra Client SDK for actual payment terminal hardware
+  - **"mock"**: Uses MockPaymentManager for simulated payments (useful for testing and development)
+- **Configuration Flow**: Server sends `DEVICE_INFO` message with `paymentProvider` field, which is stored locally in device configuration.
+- **Runtime Switching**: Payment provider can be changed remotely via backend configuration without app restart.
+- **Settings Display**: Current payment provider is displayed in Settings screen with clear indication (Real vs Simulated).
+
+---
+
+### 2. Local Screen Control
+
+**Reduced Backend Dependencies for Screen Management**
+
+The app now controls most screens locally without requiring backend messages for every screen transition. This improves responsiveness and reduces server load.
+
+#### 2.1 Keypad Entry Screen (KEYPAD)
+
+- **Local Control**: When user selects "Other" option from amount selection, the KEYPAD screen is shown locally without server message.
+- **Local Validation**: Uses device configuration (min/max transaction limits) for validation.
+- **Currency Display**: Currency symbol is retrieved from local device configuration.
+- **User Experience**: Immediate screen transition without waiting for server response.
+
+#### 2.2 Timeout Screen (TIMEOUT)
+
+- **Local Control**: When `yaspaEnabled = false` in device configuration, the TIMEOUT screen is shown locally after amount selection.
+- **Automatic Flow**: After showing timeout screen for 3 seconds, payment processing begins automatically.
+- **No Server Dependency**: Server does not need to send TIMEOUT screen message when YASPA is disabled.
+
+#### 2.3 Processing Screen (PROCESSING)
+
+- **Local Control**: For DEBIT_CARD and PAY_BY_BANK payment methods, the PROCESSING screen is shown automatically by the app.
+- **Immediate Display**: Screen appears immediately when payment method is selected, before any server communication.
+- **Payment Flow**: Processing screen is shown while performing local card check and payment operations.
+
+#### 2.4 Success/Failed Screens (SUCCESS/FAILED)
+
+- **Local Control**: Transaction success or failure screens are shown locally based on payment result.
+- **Automatic Display**: After payment processing completes, appropriate screen is shown without server message.
+- **Error Handling**: Failed transactions show error messages from payment provider response.
+
+#### 2.5 Limit Error Screen (LIMIT_ERROR)
+
+- **Local Control**: When transaction amount exceeds min/max limits, LIMIT_ERROR screen is shown locally.
+- **Immediate Validation**: Validation occurs before sending amount to server, providing instant feedback.
+- **User Recovery**: User can reset and return to amount selection after viewing limit error.
+
+#### 2.6 Receipt Question Screen (RECEIPT_QUESTION)
+
+- **Local Control**: Receipt question screen display is controlled by local `requireCardReceipt` configuration.
+- **Conditional Display**: If `requireCardReceipt = false`, the screen is skipped and receipt is automatically declined.
+- **Configuration-Based**: Behavior is determined by device configuration received from backend.
+
+#### 2.7 Mock Payment Card Screen (MOCK_PAYMENT_CARD)
+
+- **Local Control**: When using mock payment provider, a special card presentation screen is shown locally.
+- **Provider-Specific**: Only appears when `paymentProvider = "mock"`.
+- **Visual Feedback**: Displays amount and payment instructions specific to mock payment flow.
+
+---
+
+### 3. Local Transaction Limit Checking
+
+**Client-Side Limit Validation**
+
+- **Local Validation**: Transaction amounts are validated against min/max limits locally before sending to server.
+- **Device Configuration**: Uses `minTransactionLimit` and `maxTransactionLimit` from local device configuration.
+- **Immediate Feedback**: If amount is outside limits, LIMIT_ERROR screen is shown immediately without server communication.
+- **Currency-Aware**: Error messages display currency symbol from device configuration.
+- **Special Cases**: Mock payment provider includes special limit checking (e.g., amount 101 triggers daily limit exceeded).
+
+**Validation Flow:**
+1. User selects or enters amount
+2. App checks amount against local min/max limits
+3. If valid, amount is sent to server
+4. If invalid, LIMIT_ERROR screen is shown locally
+
+---
+
+### 4. DEVICE_INFO for IP Address and Serial Number
+
+**Device Information Reporting**
+
+- **Automatic Response**: When server sends `INFO_SCREEN` message with `requestType: "DEVICE_INFO"`, the app automatically responds with device information.
+- **IP Address Reporting**: App sends device IP address via `DEVICE_INFO` message with `screen: "DEVICE_IP"`.
+- **Serial Number Reporting**: App sends device serial number via `DEVICE_INFO` message with `screen: "DEVICE_SERIAL"`.
+- **Transaction Correlation**: Both responses use the same transaction ID from the request for proper correlation.
+- **Settings Display**: IP address and serial number are also displayed in Settings screen for local viewing.
+- **Real-Time Retrieval**: Device information is retrieved in real-time when requested, ensuring accuracy.
+
+**Message Format:**
+- IP Address: `{"messageType": "DEVICE_INFO", "screen": "DEVICE_IP", "data": {"deviceIpAddress": "192.168.1.100"}}`
+- Serial Number: `{"messageType": "DEVICE_INFO", "screen": "DEVICE_SERIAL", "data": {"deviceSerialNumber": "ABC123"}}`
+
+---
+
+### 5. Mock Payment Support
+
+**Simulated Payment Processing for Testing**
+
+- **MockPaymentManager**: New payment manager implementation for simulated payment responses.
+- **Provider Selection**: Activated when `paymentProvider = "mock"` in device configuration.
+- **Full Payment Flow**: Supports complete payment flow including:
+  - Card check (CardCheckEmv simulation)
+  - Sale transaction
+  - Transaction cancellation
+  - Sale reversal (refund)
+- **Realistic Simulation**: Mock responses match the structure of real Integra SDK responses for compatibility.
+- **Special Behaviors**:
+  - Amount 101.00 triggers daily limit exceeded error
+  - All other amounts return successful payment
+  - Simulated network delays (1-4 seconds) for realistic testing
+- **Development Benefits**: Enables testing without requiring actual payment terminal hardware.
+
+**Mock Payment Features:**
+- Generates mock card tokens and sequence numbers
+- Simulates approval/rejection responses
+- Provides realistic timing delays
+- Supports all payment operations (check, sale, cancel, reversal)
+
+---
+
+### 6. Local Device Configuration Management
+
+**Comprehensive Device Settings Storage**
+
+The app now stores and manages device configuration locally, received from backend via `DEVICE_INFO` message. All configuration values are persisted in local database.
+
+#### 6.1 Transaction Limits
+
+- **Min Transaction Limit**: Minimum allowed transaction amount (stored as `minTransactionLimit`)
+- **Max Transaction Limit**: Maximum allowed transaction amount (stored as `maxTransactionLimit`)
+- **Local Storage**: Limits are stored in device configuration database
+- **Default Values**: Defaults to £10 min and £300 max if not configured
+- **Usage**: Used for local validation before sending amounts to server
+
+#### 6.2 Transaction Fees
+
+- **Fee Type**: Supports two fee calculation methods:
+  - **"FIXED"**: Fixed amount added to transaction (e.g., £0.50)
+  - **"PERCENTAGE"**: Percentage of transaction amount (e.g., 2.5%)
+- **Fee Value**: Fee amount or percentage value (stored as `transactionFeeValue`)
+- **Automatic Calculation**: Final amount including fee is calculated automatically before payment processing
+- **Display**: Original amount is shown to user, but final amount (with fee) is used for payment
+
+#### 6.3 Currency Configuration
+
+- **Currency Code**: Three-letter currency code (e.g., "GBP", "USD", "EUR")
+- **Currency Symbol**: Automatically converted to symbol for display (£, $, €)
+- **Local Storage**: Currency is stored in device configuration
+- **Default**: Defaults to "GBP" if not configured
+
+#### 6.4 YASPA (Payment Method Selection) Control
+
+- **YASPA Enabled**: When `yaspaEnabled = true`, user sees payment method selection screen
+- **YASPA Disabled**: When `yaspaEnabled = false`, app shows timeout screen and proceeds directly to payment
+- **Flow Control**: Determines whether payment method selection is shown or skipped
+- **Local Behavior**: App controls screen flow based on this configuration
+
+#### 6.5 Payment Provider
+
+- **Provider Selection**: Determines which payment manager to use ("integra" or "mock")
+- **Runtime Configuration**: Can be changed remotely via backend
+- **Local Storage**: Stored in device configuration database
+- **Default**: Defaults to "integra" if not configured
+
+#### 6.6 Card Receipt Requirement
+
+- **Require Card Receipt**: When `requireCardReceipt = true`, receipt question screen is shown
+- **Skip Receipt**: When `requireCardReceipt = false`, receipt question is skipped and automatically declined
+- **Local Control**: App controls receipt screen display based on this configuration
+- **Default**: Defaults to `true` for backward compatibility
+
+#### 6.7 Configuration Persistence
+
+- **Database Storage**: All configuration is stored in Room database (`DeviceInfo` entity)
+- **Automatic Updates**: Configuration is updated when `DEVICE_INFO` message is received from server
+- **Settings Display**: All configuration values are visible in Settings screen
+- **Fallback Values**: App uses sensible defaults if configuration is missing
+
+---
+
+## Technical Details
+
+### Configuration Storage
+
+- **Database**: Room database with `DeviceInfo` entity
+- **Table**: Single-row table (id = 1) for device configuration
+- **Update Strategy**: REPLACE strategy for insert/update operations
+- **Fields**: currency, minTransactionLimit, maxTransactionLimit, transactionFeeType, transactionFeeValue, yaspaEnabled, paymentProvider, requireCardReceipt
+
+### Payment Provider Architecture
+
+- **PlanetPaymentManager**: Handles real payment terminal operations via Planet Integra Client SDK
+- **MockPaymentManager**: Simulates payment operations for testing
+- **Provider Selection**: Determined at runtime based on `paymentProvider` configuration
+- **Unified Interface**: Both managers implement same interface for seamless switching
+
+### Local Screen Control
+
+- **State Management**: Screen states managed locally in `PaymentViewModel`
+- **State Flow**: Uses Kotlin StateFlow for reactive screen updates
+- **Backend Override**: Server can still send screen change messages to override local behavior
+- **Priority**: Local screens take precedence unless server explicitly sends screen change
+
+### Device Information Retrieval
+
+- **IP Address**: Retrieved via `NetworkInterface` API
+- **Serial Number**: Retrieved via `Build.getSerial()` or `Build.SERIAL` (depending on Android version)
+- **Error Handling**: Returns "unknown" if information cannot be retrieved
+- **Thread Safety**: All operations are thread-safe and use coroutines
+
+---
+
+## Known Behaviors
+
+### Local Screen Control
+
+When the app is handling payment locally (YASPA disabled or local payment methods), some server screen change messages may be ignored. This is expected behavior to maintain local control of the payment flow.
+
+### Mock Payment Provider
+
+When using mock payment provider, all payment operations are simulated. No actual payment terminal hardware is required, making it ideal for testing and development.
+
+### Device Configuration
+
+If device configuration is not received from server, the app uses default values. Configuration can be sent at any time via `DEVICE_INFO` message and will be applied immediately.
+
+### Transaction Fee Calculation
+
+Transaction fees are calculated automatically and added to the original amount. The user sees the original amount, but the final amount (including fee) is used for payment processing.
+
+---
+
+## Bug Fixes & Improvements
+
+- Improved local screen control reduces server dependencies
+- Enhanced payment provider flexibility with runtime configuration
+- Better error handling for device information retrieval
+- Optimized transaction limit validation with immediate feedback
+- Improved configuration management with persistent storage
+- Enhanced Settings screen with comprehensive device information display
+
+---
+
+## Upgrade Instructions
+
+1. Install the new APK version (2.0, Build 2)
+2. On first launch, device configuration will be received from server via `DEVICE_INFO` message
+3. Existing server connections will automatically receive new configuration
+4. Settings screen now displays all device configuration values
+5. Mock payment provider can be enabled via backend configuration for testing
+
+---
+
+## Support
+
+For technical support or questions regarding this release, please contact your system administrator or support team.
+
+---
+
+## Changelog Summary
+
+- Added payment provider configuration from backend (integra/mock)
+- Implemented local control for KEYPAD, TIMEOUT, PROCESSING, SUCCESS, FAILED, LIMIT_ERROR, RECEIPT_QUESTION, and MOCK_PAYMENT_CARD screens
+- Added local transaction limit checking before server communication
+- Implemented DEVICE_INFO message support for IP address and serial number reporting
+- Added MockPaymentManager for simulated payment processing
+- Implemented comprehensive local device configuration management (limits, fees, currency, YASPA, payment provider, receipt requirement)
+- Enhanced Settings screen with full device configuration display
+- Improved payment flow with reduced server dependencies
+- Better error handling and user feedback
+
+---
+
 ## Version 1.1.2 (Build 3)
 
 **Release Date:** December 2025
