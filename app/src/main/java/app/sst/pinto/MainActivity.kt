@@ -231,11 +231,6 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
                         showSettings = false
                         showServerConfig = true
                     },
-                    onDownloadVideo = {
-                        // Implement video download if needed
-                        // For now, just log
-                        android.util.Log.d("MainActivity", "Download video requested")
-                    },
                     onClose = {
                         showSettings = false
                     },

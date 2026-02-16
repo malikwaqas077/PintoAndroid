@@ -12,8 +12,9 @@ android {
         applicationId = "app.sst.pinto"
         minSdk = 25
         targetSdk = 34
-        versionCode = 3
-        versionName = "2.0"
+        // Bumped for screensaver download feature and fixes
+        versionCode = 4
+        versionName = "2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

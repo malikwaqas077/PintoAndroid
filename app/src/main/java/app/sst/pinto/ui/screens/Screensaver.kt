@@ -1,5 +1,6 @@
 package app.sst.pinto.ui.components
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -27,6 +28,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import app.sst.pinto.utils.FileLogger
+import app.sst.pinto.utils.VideoDownloadManager
+import java.io.File
 
 private const val TAG = "Screensaver"
 
@@ -56,10 +60,29 @@ fun Screensaver(
 
             // Initialize new player when screensaver becomes visible
             player = ExoPlayer.Builder(context).build().apply {
-                // Set up video from raw resource
-                val videoUri = "android.resource://${context.packageName}/$videoResId"
-                Log.d(TAG, "Setting media item: $videoUri")
-                setMediaItem(MediaItem.fromUri(Uri.parse(videoUri)))
+                // Decide whether to use cached video or default resource
+                val prefs = context.getSharedPreferences(
+                    VideoDownloadManager.PREFS_NAME,
+                    Context.MODE_PRIVATE
+                )
+                val cachedPath = prefs.getString(
+                    VideoDownloadManager.KEY_CURRENT_VIDEO_PATH,
+                    null
+                )
+
+                val videoUriString = if (!cachedPath.isNullOrBlank()) {
+                    FileLogger.getInstance(context).i(
+                        TAG,
+                        "Using cached screensaver video: $cachedPath"
+                    )
+                    Uri.fromFile(File(cachedPath)).toString()
+                } else {
+                    Log.d(TAG, "Using default screensaver video from resources")
+                    "android.resource://${context.packageName}/$videoResId"
+                }
+
+                Log.d(TAG, "Setting media item: $videoUriString")
+                setMediaItem(MediaItem.fromUri(Uri.parse(videoUriString)))
 
                 // Configure player
                 repeatMode = Player.REPEAT_MODE_ALL
@@ -90,7 +113,7 @@ fun Screensaver(
                     override fun onPlayerError(error: PlaybackException) {
                         Log.e(TAG, "Player error: ${error.message}")
                         // Try to recover by recreating the media item
-                        setMediaItem(MediaItem.fromUri(Uri.parse(videoUri)))
+                        setMediaItem(MediaItem.fromUri(Uri.parse(videoUriString)))
                         prepare()
                         play()
                     }

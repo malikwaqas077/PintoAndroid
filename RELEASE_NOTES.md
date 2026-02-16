@@ -1,5 +1,18 @@
 # Pinto Android App - Release Notes
 
+## Version 2.1 (Build 4)
+
+**Release Date:** February 2026
+
+---
+
+### Changes
+
+- **Screensaver video download**: Fixed an issue where downloading by video name (for example, `screensaver`) sometimes failed. Name input and full URL input both work correctly now.
+- **Screensaver video audio**: Replaced the default screensaver video with a new version that has no audio track. Downloaded custom videos are still used when available.
+
+---
+
 ## Version 2.0 (Build 2)
 
 **Release Date:** December 2025
