@@ -41,44 +41,91 @@ import app.sst.pinto.ui.screens.ServerConfigScreen
 import app.sst.pinto.ui.screens.SettingsScreen
 import android.content.Intent
 import android.net.Uri
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import app.sst.pinto.data.AppDatabase
+import app.sst.pinto.network.SocketManager
+import app.sst.pinto.payment.NNSmartPaymentManager
+import app.sst.pinto.utils.FileLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
     private lateinit var timeoutManager: TimeoutManager
     private lateinit var configManager: ConfigManager
+    private lateinit var fileLogger: FileLogger
+
+    private var isReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen().setKeepOnScreenCondition { !isReady }
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate called")
 
         // Initialize managers first
         timeoutManager = TimeoutManager.getInstance()
         configManager = ConfigManager.getInstance(applicationContext)
+        fileLogger = FileLogger.getInstance(applicationContext)
+
+        // Route critical subsystem logs to retained local files.
+        SocketManager.getInstance().configureLogging(fileLogger)
+        NNSmartPaymentManager.configureLogging(fileLogger)
+        app.sst.pinto.payment.PlanetPaymentManager.configureLogging(fileLogger)
+
+        // Persist uncaught crashes before process exits.
+        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            fileLogger.e(
+                TAG,
+                "Uncaught exception on thread=${thread.name}: ${throwable.message}",
+                throwable
+            )
+            previousHandler?.uncaughtException(thread, throwable)
+        }
         
-        // Initialize Planet SDK logger early (must be done before any SDK calls)
-        // This prevents native crashes that can occur if SDK is used before logger is initialized
-        // Run on background thread to avoid blocking UI thread, especially on non-Planet devices
-        app.sst.pinto.payment.PlanetPaymentManager.initializeLoggerAsync { isAvailable ->
-            if (isAvailable) {
-                Log.d(TAG, "Planet SDK is available on this device")
-                
-                // Initialize Integra instance early at app start for faster transactions
-                // This avoids initialization delay during payment processing
-                Thread {
-                    try {
-                        val success = app.sst.pinto.payment.PlanetPaymentManager.initializeIntegra()
-                        if (success) {
-                            Log.d(TAG, "Planet Integra initialized successfully at app start")
-                        } else {
-                            Log.w(TAG, "Planet Integra initialization deferred (will initialize on first transaction)")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error initializing Planet Integra at app start", e)
-                        // Non-fatal: will initialize lazily on first transaction
+        // Initialize the Planet/Integra SDK ONLY when the configured payment
+        // provider is Integra. Loading the Integra native .so on a non-Planet
+        // terminal (e.g. Newland U2000 running NNSmart) has been observed to
+        // crash with SIGSEGV inside the JNI bridge, so we skip it entirely
+        // on other providers.
+        CoroutineScope(Dispatchers.IO).launch {
+            val provider = try {
+                AppDatabase.getDatabase(applicationContext)
+                    .deviceInfoDao()
+                    .getDeviceInfo()
+                    .first()
+                    ?.paymentProvider
+                    ?.lowercase()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read payment provider from DB, defaulting to nnsmart", e)
+                null
+            } ?: "nnsmart"
+
+            if (provider == "integra") {
+                Log.d(TAG, "Payment provider = integra, initializing Planet SDK")
+                app.sst.pinto.payment.PlanetPaymentManager.initializeLoggerAsync { isAvailable ->
+                    if (isAvailable) {
+                        Log.d(TAG, "Planet SDK is available on this device")
+                        Thread {
+                            try {
+                                val success = app.sst.pinto.payment.PlanetPaymentManager.initializeIntegra()
+                                if (success) {
+                                    Log.d(TAG, "Planet Integra initialized successfully at app start")
+                                } else {
+                                    Log.w(TAG, "Planet Integra initialization deferred (will initialize on first transaction)")
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error initializing Planet Integra at app start", e)
+                            }
+                        }.start()
+                    } else {
+                        Log.w(TAG, "Planet SDK is not available on this device - payment features will be disabled")
                     }
-                }.start()
+                }
             } else {
-                Log.w(TAG, "Planet SDK is not available on this device - payment features will be disabled")
+                Log.d(TAG, "Payment provider = $provider, skipping Planet SDK initialization")
             }
         }
 
@@ -93,6 +140,9 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MainScreen(configManager, R.raw.screensaver)
+                    LaunchedEffect(Unit) {
+                        isReady = true
+                    }
                 }
             }
         }
@@ -161,9 +211,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
-        // Record user interaction for any touch event
         if (ev?.action == MotionEvent.ACTION_DOWN) {
-            Log.d(TAG, "Touch event detected, recording user interaction")
             timeoutManager.recordUserInteraction()
         }
         return super.dispatchTouchEvent(ev)
@@ -254,13 +302,11 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
                         }
                     },
                     onCancel = if (!configManager.isFirstLaunch()) {
-                        { showServerConfig = false }
-                    } else null,
-                    onTest = { ip, port ->
-                        // Implement connection test if needed
-                        val testUrl = "ws://$ip:$port"
-                        // You could add a simple connection test here
-                    }
+                        {
+                            showServerConfig = false
+                            showSettings = true
+                        }
+                    } else null
                 )
             }
             else -> {

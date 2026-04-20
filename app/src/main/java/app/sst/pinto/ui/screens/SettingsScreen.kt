@@ -169,6 +169,7 @@ fun SettingsScreen(
                                 value = when (info.paymentProvider.uppercase()) {
                                     "MOCK" -> "Mock (Simulated)"
                                     "INTEGRA" -> "Integra (Real)"
+                                    "NNSMART", "NEWLAND" -> "NNSmart (Newland)"
                                     else -> info.paymentProvider
                                 }
                             )

@@ -3,6 +3,7 @@ package app.sst.pinto.ui.components
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -28,6 +29,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import app.sst.pinto.R
 import app.sst.pinto.utils.FileLogger
 import app.sst.pinto.utils.VideoDownloadManager
 import java.io.File
@@ -119,8 +121,10 @@ fun Screensaver(
                     }
                 })
 
-                prepare()
-                Log.d(TAG, "ExoPlayer prepared and set to play")
+                // Don't call prepare() here — wait until the PlayerView
+                // surface is attached (in the AndroidView update block)
+                // to avoid a surface swap that corrupts the decoder.
+                Log.d(TAG, "ExoPlayer created, waiting for surface before prepare")
             }
         } else {
             // Release player when screensaver is hidden
@@ -157,32 +161,38 @@ fun Screensaver(
         ) {
             // Render the video player
             player?.let { exoPlayer ->
-                AndroidView(
-                    factory = { ctx ->
-                        Log.d(TAG, "Creating PlayerView")
-                        PlayerView(ctx).apply {
-                            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                            this.player = exoPlayer
-                            useController = false // Hide playback controls
-
-                            // Additional configuration to prevent surface issues
-                            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                            setKeepContentOnPlayerReset(true)
-
-                            // Set surface view to handle lifecycle properly
-                            post {
-                                this.player = exoPlayer
+                // SurfaceView (PlayerView default) does not draw correctly when a parent
+                // applies alpha (e.g. AnimatedVisibility fadeIn), which often shows a black
+                // rectangle until something forces a redraw (like a tap). TextureView
+                // composites like a normal View and avoids that failure mode.
+                key(exoPlayer) {
+                    AndroidView(
+                        factory = { ctx ->
+                            Log.d(TAG, "Inflating texture PlayerView for Compose")
+                            val inflater = LayoutInflater.from(ctx)
+                            (inflater.inflate(
+                                R.layout.screensaver_player_view,
+                                null,
+                                false
+                            ) as PlayerView).apply {
+                                layoutParams =
+                                    FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                                setKeepContentOnPlayerReset(true)
                             }
-                        }
-                    },
-                    update = { playerView ->
-                        // Ensure player is set on updates
-                        if (playerView.player != exoPlayer) {
-                            playerView.player = exoPlayer
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                        },
+                        update = { playerView ->
+                            if (playerView.player != exoPlayer) {
+                                playerView.player = exoPlayer
+                                // Prepare now that the surface is attached
+                                if (exoPlayer.playbackState == Player.STATE_IDLE) {
+                                    Log.d(TAG, "Surface attached, preparing ExoPlayer")
+                                    exoPlayer.prepare()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             } ?: run {
                 // Fallback for when player isn't initialized yet
                 Log.d(TAG, "Showing fallback text (player not ready)")

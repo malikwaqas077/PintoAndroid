@@ -47,7 +47,10 @@ data class MessageData(
     @Json(name = "paymentProvider") val paymentProvider: String? = null,
     @Json(name = "requireCardReceipt") val requireCardReceipt: Boolean? = null,
     
-    // Card check result fields
+    // Card check result fields.
+    // For Integra this carries the card token from CardCheckEmv.
+    // For NNSmart (Newland) this carries the PAR returned by the SALE —
+    // sent on the same field so the backend contract is unchanged.
     @Json(name = "cardToken") val cardToken: String? = null,
     
     // Device information request fields
@@ -106,6 +109,14 @@ sealed class PaymentScreenState {
     data class TransactionSuccess(val showReceipt: Boolean) : PaymentScreenState()
 
     data class TransactionFailed(val errorMessage: String?) : PaymentScreenState()
+
+    data class ReversingTransaction(
+        val message: String = "Reversing transaction on terminal..."
+    ) : PaymentScreenState()
+
+    data class ReversalSuccess(
+        val message: String = "Transaction reversed successfully"
+    ) : PaymentScreenState()
 
     data class LimitError(
         val errorMessage: String

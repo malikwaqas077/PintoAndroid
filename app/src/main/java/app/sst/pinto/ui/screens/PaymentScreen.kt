@@ -91,14 +91,6 @@ fun AnimatedPngImage(
         screenWidth.coerceAtLeast(screenHeight).coerceAtMost(1024)
     }
     
-    // #region agent log
-    LaunchedEffect(imageResId, maxSize) {
-        try {
-            val logData = """{"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"PaymentScreen.kt:92","message":"AnimatedPngImage loading with size constraints","data":{"imageResId":$imageResId,"maxSize":$maxSize,"screenWidth":${context.resources.displayMetrics.widthPixels},"screenHeight":${context.resources.displayMetrics.heightPixels}},"timestamp":${System.currentTimeMillis()}}"""
-            java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
-        } catch (e: Exception) {}
-    }
-    // #endregion
     
     AsyncImage(
         model = ImageRequest.Builder(context)
@@ -175,14 +167,6 @@ fun CollectTicketScreen() {
 @Composable
 fun ThankYouScreen() {
     val context = LocalContext.current
-    // #region agent log
-    LaunchedEffect(Unit) {
-        try {
-            val logData = """{"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"PaymentScreen.kt:165","message":"ThankYouScreen composed","data":{"screenWidth":${context.resources.displayMetrics.widthPixels},"screenHeight":${context.resources.displayMetrics.heightPixels}},"timestamp":${System.currentTimeMillis()}}"""
-            java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
-        } catch (e: Exception) {}
-    }
-    // #endregion
     
     Column(
         modifier = Modifier
@@ -192,15 +176,6 @@ fun ThankYouScreen() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Logo at top - using AsyncImage with size constraints to prevent GL out of memory
-        // #region agent log
-        LaunchedEffect(Unit) {
-            try {
-                val maxSize = context.resources.displayMetrics.widthPixels.coerceAtMost(512)
-                val logData = """{"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A","location":"PaymentScreen.kt:192","message":"Logo image loading with size constraints","data":{"imageResource":"R.drawable.logo","displaySize":"160.dp","maxDecodeSize":$maxSize},"timestamp":${System.currentTimeMillis()}}"""
-                java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
-            } catch (e: Exception) {}
-        }
-        // #endregion
         // Use AsyncImage with size constraints instead of painterResource to prevent full-resolution decode
         // This ensures the logo is decoded at an appropriate size before loading into GPU memory
         val logoMaxSize = remember(context) {
@@ -226,14 +201,6 @@ fun ThankYouScreen() {
         )
 
         // Thank you animation - using animated PNG
-        // #region agent log
-        LaunchedEffect(Unit) {
-            try {
-                val logData = """{"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"PaymentScreen.kt:184","message":"ThankYou image loading started","data":{"imageResource":"R.raw.thankyou","displaySize":"240.dp"},"timestamp":${System.currentTimeMillis()}}"""
-                java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
-            } catch (e: Exception) {}
-        }
-        // #endregion
         AnimatedPngImage(
             imageResId = R.raw.thankyou,
             contentDescription = "Thank You Animation",
@@ -493,6 +460,78 @@ fun TransactionFailedScreen(errorMessage: String?) {
 }
 
 @Composable
+fun ReversingTransactionScreen(message: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "Reversing Transaction")
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        AnimatedPngImage(
+            imageResId = R.raw.pending,
+            contentDescription = "Reversing Transaction",
+            modifier = Modifier.size(200.dp),
+            enablePulseAnimation = true
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "pulse"
+        )
+
+        Text(
+            text = message,
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(alpha)
+        )
+    }
+}
+
+@Composable
+fun ReversalSuccessScreen(message: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "Reversal Complete")
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        AnimatedPngImage(
+            imageResId = R.raw.accepted,
+            contentDescription = "Reversal Successful",
+            modifier = Modifier.size(200.dp),
+            enablePulseAnimation = true
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = message,
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
 fun LimitErrorScreen(errorMessage: String) {
     Column(
         modifier = Modifier
@@ -690,6 +729,12 @@ fun PaymentScreen(
             is PaymentScreenState.TransactionSuccess -> TransactionSuccessScreen()
             is PaymentScreenState.TransactionFailed -> TransactionFailedScreen(
                 errorMessage = targetState.errorMessage
+            )
+            is PaymentScreenState.ReversingTransaction -> ReversingTransactionScreen(
+                message = targetState.message
+            )
+            is PaymentScreenState.ReversalSuccess -> ReversalSuccessScreen(
+                message = targetState.message
             )
             is PaymentScreenState.LimitError -> LimitErrorScreen(
                 errorMessage = targetState.errorMessage
@@ -1494,7 +1539,8 @@ fun KeypadEntryScreen(
                     // Clear button
                     KeypadButton(
                         text = "X",
-                        backgroundColor = Color.Red.copy(alpha = 0.7f),
+                        backgroundColor = Color(0xFFD32F2F),
+                        textColor = Color.White,
                         modifier = Modifier.weight(1f),
                         onClick = {
                             // Clear error when clearing amount
@@ -1519,7 +1565,8 @@ fun KeypadEntryScreen(
                     // OK button
                     KeypadButton(
                         text = "OK",
-                        backgroundColor = Color.Green.copy(alpha = 0.7f),
+                        backgroundColor = Color(0xFF388E3C),
+                        textColor = Color.White,
                         modifier = Modifier.weight(1f),
                         onClick = {
                             enteredAmount.value.toIntOrNull()?.let { amount ->
@@ -1578,9 +1625,11 @@ fun KeypadButton(
     text: String,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    textColor: Color = Color.Unspecified,
     onClick: () -> Unit
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    val resolvedTextColor = if (textColor != Color.Unspecified) textColor else MaterialTheme.colorScheme.onSecondaryContainer
 
     Box(
         modifier = modifier
@@ -1607,7 +1656,7 @@ fun KeypadButton(
             text = text,
             fontWeight = FontWeight.Bold,
             fontSize = 26.sp,
-            color = MaterialTheme.colorScheme.onSecondaryContainer
+            color = resolvedTextColor
         )
     }
 

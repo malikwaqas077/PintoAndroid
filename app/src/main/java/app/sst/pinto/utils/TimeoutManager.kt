@@ -1,6 +1,7 @@
 package app.sst.pinto.utils
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,7 +44,6 @@ class TimeoutManager private constructor() {
      * Records user interaction to reset the timeout timer.
      */
     fun recordUserInteraction() {
-        Log.d(TAG, "User interaction recorded, resetting timeout timer")
         resetTimer()
 
         // If timeout has occurred, reset the flag
@@ -59,7 +59,14 @@ class TimeoutManager private constructor() {
         // Cancel any existing timeout job
         timeoutJob?.cancel()
 
-        // Start a new timeout job
+        // Start a new timeout job.
+        //
+        // NOTE: We deliberately don't wrap `delay(...)` in a catch-all.
+        // Coroutine cancellation is a cooperative `CancellationException`,
+        // so every time `recordUserInteraction()` cancels the previous
+        // job the old code logged a misleading "Error in timeout timer"
+        // entry. We now only log truly unexpected failures and always
+        // rethrow cancellation to preserve structured concurrency.
         timeoutJob = CoroutineScope(Dispatchers.Main).launch {
             try {
                 delay(timeoutDuration)
@@ -68,8 +75,12 @@ class TimeoutManager private constructor() {
                     _timeoutOccurred.value = true
                     onTimeoutCallback?.invoke()
                 }
+            } catch (e: CancellationException) {
+                // Expected: the timer was reset or paused. Rethrow so the
+                // coroutine machinery treats it as a normal cancellation.
+                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Error in timeout timer", e)
+                Log.e(TAG, "Unexpected error in timeout timer", e)
             }
         }
     }

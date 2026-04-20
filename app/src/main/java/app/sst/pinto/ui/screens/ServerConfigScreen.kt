@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -23,14 +24,12 @@ fun ServerConfigScreen(
     currentPort: String = "5001",
     isFirstTime: Boolean = true,
     onSave: (String, String) -> Unit,
-    onCancel: (() -> Unit)? = null,
-    onTest: ((String, String) -> Unit)? = null
+    onCancel: (() -> Unit)? = null
 ) {
     var ipAddress by remember { mutableStateOf(currentIp) }
     var port by remember { mutableStateOf(currentPort) }
     var ipError by remember { mutableStateOf<String?>(null) }
     var portError by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
 
     fun validateInputs(): Boolean {
         var isValid = true
@@ -143,6 +142,7 @@ fun ServerConfigScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    var portFocused by remember { mutableStateOf(false) }
                     OutlinedTextField(
                         value = port,
                         onValueChange = {
@@ -152,7 +152,14 @@ fun ServerConfigScreen(
                         placeholder = { Text("5001") },
                         isError = portError != null,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused && !portFocused) {
+                                    portFocused = true
+                                    port = ""
+                                }
+                            },
                         singleLine = true
                     )
                     portError?.let {
@@ -165,29 +172,6 @@ fun ServerConfigScreen(
                     }
                 }
 
-                // Preview URL
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(
-                            text = "Connection URL:",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = if (ipAddress.isNotEmpty()) "ws://$ipAddress:$port" else "ws://[ip]:[port]",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
             }
         }
 
@@ -200,51 +184,26 @@ fun ServerConfigScreen(
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Test Connection Button (if provided)
-            onTest?.let { testCallback ->
-                OutlinedButton(
-                    onClick = {
-                        if (validateInputs()) {
-                            isLoading = true
-                            testCallback(ipAddress.trim(), port.trim())
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Test")
-                    }
-                }
-            }
-
             // Cancel Button (if not first time)
             if (!isFirstTime && onCancel != null) {
                 OutlinedButton(
                     onClick = onCancel,
-                    modifier = Modifier.weight(1f),
-                    enabled = !isLoading
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text("Cancel")
                 }
             }
 
-            // Save Button
+            // Connect Button
             Button(
                 onClick = {
                     if (validateInputs()) {
                         onSave(ipAddress.trim(), port.trim())
                     }
                 },
-                modifier = Modifier.weight(if (isFirstTime) 2f else 1f),
-                enabled = !isLoading
+                modifier = Modifier.weight(if (isFirstTime) 2f else 1f)
             ) {
-                Text(if (isFirstTime) "Connect" else "Save")
+                Text("Connect")
             }
         }
 

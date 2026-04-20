@@ -16,7 +16,8 @@ import kotlin.concurrent.withLock
  * - Limits log file size to 4 MB
  * - Creates a new file when size limit is exceeded
  * - Thread-safe logging
- * - Automatically cleans up logs older than 30 days (1 month)
+ * - Automatically cleans up logs older than 60 days (2 months)
+ * - Enforces max total size and max file count caps
  */
 class FileLogger private constructor(context: Context) {
     private val TAG = "FileLogger"
@@ -24,6 +25,8 @@ class FileLogger private constructor(context: Context) {
     private val context: Context = context.applicationContext
     private val logDir: File = File(context.getExternalFilesDir(null), "logs")
     private val maxFileSizeBytes = 4 * 1024 * 1024L // 4 MB
+    private val maxTotalSizeBytes = 200L * 1024L * 1024L // 200 MB cap across all log files
+    private val maxFileCount = 120 // hard cap to avoid file explosion
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     private val timeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
     
@@ -43,6 +46,8 @@ class FileLogger private constructor(context: Context) {
         
         // Find the latest log file for today
         initializeLogFile()
+        clearOldLogs(DEFAULT_LOG_RETENTION_DAYS)
+        enforceStorageCaps()
         
         // Also log to Android Log for debugging
         Log.d(TAG, "FileLogger initialized. Log directory: ${logDir.absolutePath}")
@@ -155,6 +160,9 @@ class FileLogger private constructor(context: Context) {
                 writer.append(logEntry.toString())
                 writer.flush()
             }
+
+            // Keep storage bounded even if logs are very noisy.
+            enforceStorageCaps()
             
             // Also log to Android Log for immediate debugging
             when (level) {
@@ -237,13 +245,44 @@ class FileLogger private constructor(context: Context) {
             Log.e(TAG, "Error clearing old logs", e)
         }
     }
+
+    /**
+     * Enforce maximum number of log files and total bytes by deleting oldest files first.
+     */
+    private fun enforceStorageCaps() {
+        try {
+            val files = logDir.listFiles { file ->
+                file.name.startsWith("log_") && file.name.endsWith(".txt")
+            }?.sortedBy { it.lastModified() }?.toMutableList() ?: return
+
+            var totalSize = files.sumOf { it.length() }
+
+            // First enforce file-count cap.
+            while (files.size > maxFileCount) {
+                val oldest = files.removeAt(0)
+                totalSize -= oldest.length()
+                oldest.delete()
+                Log.w(TAG, "Deleted log due to file-count cap: ${oldest.name}")
+            }
+
+            // Then enforce total-size cap.
+            while (totalSize > maxTotalSizeBytes && files.isNotEmpty()) {
+                val oldest = files.removeAt(0)
+                totalSize -= oldest.length()
+                oldest.delete()
+                Log.w(TAG, "Deleted log due to size cap: ${oldest.name}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error enforcing log storage caps", e)
+        }
+    }
     
     companion object {
         /**
          * Number of days to keep log files before automatic cleanup
-         * Default: 30 days (1 month)
+         * Default: 60 days (2 months)
          */
-        const val DEFAULT_LOG_RETENTION_DAYS = 30
+        const val DEFAULT_LOG_RETENTION_DAYS = 60
         
         @Volatile
         private var instance: FileLogger? = null

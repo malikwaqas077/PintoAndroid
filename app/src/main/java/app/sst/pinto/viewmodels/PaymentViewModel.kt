@@ -2,6 +2,7 @@ package app.sst.pinto.viewmodels
 
 import android.app.Application
 import android.content.Intent
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,8 +11,11 @@ import app.sst.pinto.data.models.PaymentScreenState
 import app.sst.pinto.data.models.SocketMessage
 import app.sst.pinto.network.SocketManager
 import app.sst.pinto.utils.TimeoutManager
+import app.sst.pinto.utils.FileLogger
 import app.sst.pinto.payment.PlanetPaymentManager
 import app.sst.pinto.payment.MockPaymentManager
+import app.sst.pinto.payment.NNSmartPaymentManager
+import app.sst.pinto.payment.NNSmartPaymentResult
 import app.sst.pinto.data.AppDatabase
 import app.sst.pinto.utils.getDeviceIpAddress
 import app.sst.pinto.utils.getDeviceSerialNumber
@@ -22,15 +26,28 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.util.UUID
 import app.sst.pinto.config.ConfigManager
 
 class PaymentViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "PaymentViewModel"
+
+    /**
+     * Fallback PAR value used when the NNSmart / Newland terminal does not
+     * populate the real PAR on the sale response (common on dev terminals).
+     * Lets the CARD_CHECK_RESULT / backend limit check still be exercised.
+     */
+    private val NNSMART_DEV_MOCK_PAR = "V0010013021140394841643193699"
+
     private val socketManager = SocketManager.getInstance()
     private val timeoutManager = TimeoutManager.getInstance()
     private val configManager = ConfigManager.getInstance(getApplication())
+    private val fileLogger = FileLogger.getInstance(getApplication())
+    private val recoveryPrefs: SharedPreferences =
+        getApplication<Application>().getSharedPreferences("payment_recovery", 0)
 
     // Store the server URL as a class property
     private var serverUrl: String = configManager.getServerUrl()
@@ -52,6 +69,12 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     
     // Payment processing state
     private var pendingCardCheckResult: app.sst.pinto.payment.CardCheckResult? = null
+
+    // For NNSmart / Newland: the SALE is executed BEFORE the backend limit
+    // check (since PAR is only available after a sale). If the backend rejects
+    // the limit we use this to run a Cancellation on the terminal.
+    private var pendingNnsmartSale: NNSmartPaymentResult? = null
+
     private var isProcessingPayment: Boolean = false
     private var isHandlingPaymentLocally: Boolean = false // Flag to track if we're handling payment locally (YASPA disabled)
     private var allowNavigationFromLimitError: Boolean = false // Flag to allow navigation away from LIMIT_ERROR after user reset
@@ -64,12 +87,36 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     )
     private var lastSuccessfulSale: SuccessfulSaleTransaction? = null
 
-    private val moshi = Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
-        .build()
+    private val moshi by lazy {
+        Moshi.Builder()
+            .addLast(KotlinJsonAdapterFactory())
+            .build()
+    }
 
-    private val messageAdapter: JsonAdapter<SocketMessage> =
+    private val messageAdapter: JsonAdapter<SocketMessage> by lazy {
         moshi.adapter(SocketMessage::class.java)
+    }
+
+    private data class PendingRecoveryTransaction(
+        val transactionId: String,
+        val amount: Int,
+        val originalTrxUniqueId: String,
+        val provider: String
+    )
+
+    private data class PendingTicketPrintTransaction(
+        val transactionId: String,
+        val amount: Int,
+        val originalRequesterRef: String,
+        val provider: String
+    )
+
+    private var disconnectRecoveryJob: Job? = null
+    private var isRecoveryInProgress: Boolean = false
+
+    private fun audit(message: String) {
+        fileLogger.i(TAG, message)
+    }
 
     init {
         Log.d(TAG, "Initializing PaymentViewModel")
@@ -121,8 +168,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 when (state) {
                     SocketManager.ConnectionState.DISCONNECTED -> {
                         Log.d(TAG, "Socket disconnected, updating screen state")
+                        audit("Socket DISCONNECTED while state=${_screenState.value::class.simpleName}")
                         // Immediately set to ConnectionError, don't go through Loading
                         _screenState.value = PaymentScreenState.ConnectionError
+                        scheduleDisconnectRecoveryIfNeeded()
                     }
                     SocketManager.ConnectionState.CONNECTING -> {
                         // Only set Loading if we're not already in ConnectionError state
@@ -131,9 +180,22 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                             _screenState.value = PaymentScreenState.Loading
                         }
                     }
-                    else -> {} // No direct state change on connected
+                    SocketManager.ConnectionState.CONNECTED -> {
+                        audit("Socket CONNECTED; cancel disconnect-recovery timer and flush pending critical messages")
+                        disconnectRecoveryJob?.cancel()
+                        disconnectRecoveryJob = null
+                        flushPendingCriticalMessages()
+                    }
                 }
             }
+        }
+
+        viewModelScope.launch {
+            delay(1500)
+            audit("Startup recovery check begin")
+            recoverPendingTransactionIfAny()
+            recoverPendingTicketNotPrintedIfAny()
+            audit("Startup recovery check complete")
         }
     }
 
@@ -157,7 +219,6 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * Records a user interaction to reset the timeout timer.
      */
     fun recordUserInteraction() {
-        Log.d(TAG, "Recording user interaction to reset timeout timer")
         timeoutManager.recordUserInteraction()
 
         // If the screensaver is visible, hide it and restore the previous state
@@ -337,7 +398,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             
             // For Mock payment provider, check if amount is 101 (daily limit trigger)
-            val paymentProvider = deviceInfo?.paymentProvider?.lowercase() ?: "integra"
+            val paymentProvider = deviceInfo?.paymentProvider?.lowercase() ?: "nnsmart"
             if (paymentProvider == "mock" && amount == 101) {
                 Log.d(TAG, "Mock payment: Amount 101 triggers daily limit exceeded")
                 _screenState.value = PaymentScreenState.LimitError(
@@ -466,7 +527,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         
         isProcessingPayment = true
         isHandlingPaymentLocally = true // Mark that we're handling payment locally
-        
+
+        // Clear any stale per-provider state from a previous attempt.
+        pendingCardCheckResult = null
+        pendingNnsmartSale = null
+
         // Step 1: Show PROCESSING screen automatically
         Log.d(TAG, "Showing PROCESSING screen for local payment")
         _screenState.value = PaymentScreenState.Processing
@@ -505,7 +570,21 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     "EUR" -> "€"
                     else -> currencyCode
                 }
-                
+
+                // NNSmart (Newland) terminals do not expose a pre-check that
+                // returns a card token. Instead we run the SALE up-front to
+                // get the PAR / cardRefId, then send those to the backend for
+                // daily-limit validation. If the backend rejects, we reverse
+                // the sale via Cancellation.
+                if (NNSmartPaymentManager.isNNSmartProvider(paymentProvider)) {
+                    processNnsmartPayment(
+                        transactionId = transactionId,
+                        amountFormatted = amountFormatted,
+                        currencyCode = currencyCode
+                    )
+                    return@launch
+                }
+
                 // For MOCK payment provider, show MockPaymentCard screen after Processing screen
                 if (paymentProvider == "mock") {
                     Log.d(TAG, "Mock payment: Showing MockPaymentCard screen after Processing")
@@ -593,10 +672,622 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     }
     
     /**
+     * NNSmart payment flow.
+     *
+     * NNSmart cannot return a card identifier before the sale is taken, so we
+     * charge first, then send `par` / `cardRefId` to the backend for daily
+     * limit validation. If the backend rejects, we reverse via Cancellation.
+     */
+    private suspend fun processNnsmartPayment(
+        transactionId: String,
+        amountFormatted: String,
+        currencyCode: String
+    ) {
+        try {
+            Log.d(TAG, "NNSmart: performing up-front sale amount=$amountFormatted ref=$transactionId")
+            val saleResult = NNSmartPaymentManager.performSale(
+                context = getApplication(),
+                amountFormatted = amountFormatted,
+                requesterRef = transactionId,
+                currencyAlphaCode = currencyCode,
+                showReceipts = false
+            )
+
+            if (!saleResult.success) {
+                Log.w(TAG, "NNSmart sale failed: code=${saleResult.resultCode} msg=${saleResult.message}")
+                _screenState.value = PaymentScreenState.TransactionFailed(
+                    errorMessage = saleResult.message ?: "Payment failed"
+                )
+                isProcessingPayment = false
+                isHandlingPaymentLocally = false
+
+                // Still notify server that the attempt failed.
+                val paymentResultJson = buildPaymentResultJson(
+                    success = false,
+                    transactionId = transactionId,
+                    resultCode = saleResult.resultCode,
+                    message = saleResult.message
+                )
+                Log.d(TAG, "NNSmart: sending PAYMENT_RESULT (sale-failed) to backend")
+                Log.d(TAG, "NNSmart: PAYMENT_RESULT payload: $paymentResultJson")
+                val sent = socketManager.sendMessage(paymentResultJson)
+                Log.d(TAG, "NNSmart: PAYMENT_RESULT send result: $sent")
+
+                viewModelScope.launch {
+                    delay(4000)
+                    requestInitialScreen()
+                }
+                return
+            }
+
+            // Sale succeeded on the terminal. Keep the result so we can
+            // reverse it later if the backend rejects the limit check.
+            pendingNnsmartSale = saleResult
+            saleResult.originalTrxUniqueId?.let { trxId ->
+                savePendingRecoveryTransaction(
+                    transactionId = transactionId,
+                    amount = currentAmount,
+                    originalTrxUniqueId = trxId,
+                    provider = "nnsmart"
+                )
+            }
+
+            // NNSmart returns a PAR (Payment Account Reference) on the sale
+            // response. We ship it to the backend in the same CARD_CHECK_RESULT
+            // shape used for Integra, reusing the `cardToken` field.
+            // On dev terminals the PAR is sometimes not populated; fall back
+            // to a fixed mock value so the backend flow can still be tested.
+            val rawPar = saleResult.par?.trim().orEmpty()
+            val tokenForLimitCheck = if (rawPar.isNotEmpty()) {
+                rawPar
+            } else {
+                Log.w(TAG, "NNSmart: PAR missing on sale response, using dev mock PAR")
+                NNSMART_DEV_MOCK_PAR
+            }
+
+            Log.d(TAG, "NNSmart: sale approved. par='$rawPar' cardRefId=${saleResult.cardRefId} trxId=${saleResult.originalTrxUniqueId} tokenUsed=$tokenForLimitCheck")
+
+            val cardCheckJson = """
+                {
+                    "messageType": "CARD_CHECK_RESULT",
+                    "screen": "PROCESSING",
+                    "data": {
+                        "cardToken": "$tokenForLimitCheck",
+                        "selectedAmount": $currentAmount
+                    },
+                    "transactionId": "$transactionId",
+                    "timestamp": ${System.currentTimeMillis()}
+                }
+            """.trimIndent()
+            Log.d(TAG, "NNSmart: sending CARD_CHECK_RESULT to backend for limit validation")
+            Log.d(TAG, "NNSmart: CARD_CHECK_RESULT payload: $cardCheckJson")
+            val sent = socketManager.sendMessage(cardCheckJson)
+            Log.d(TAG, "NNSmart: CARD_CHECK_RESULT send result: $sent")
+
+            // Stay on Processing until LIMIT_CHECK_RESULT arrives; the rest
+            // of the flow is handled in continuePaymentAfterLimitCheck.
+        } catch (e: Exception) {
+            Log.e(TAG, "NNSmart: error during sale", e)
+            _screenState.value = PaymentScreenState.TransactionFailed(
+                errorMessage = "Payment error: ${e.message}"
+            )
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+            viewModelScope.launch {
+                delay(4000)
+                requestInitialScreen()
+            }
+        }
+    }
+
+    /**
+     * Build a PAYMENT_RESULT JSON matching the server's expected contract.
+     */
+    private fun buildPaymentResultJson(
+        success: Boolean,
+        transactionId: String,
+        resultCode: String?,
+        message: String?,
+        bankResultCode: String? = null
+    ): String {
+        val screen = if (success) "SUCCESS" else "FAILED"
+        val errCodeJson = if (resultCode != null) "\"$resultCode\"" else "null"
+        val errMsgJson = if (message != null) "\"${message.replace("\"", "\\\"")}\"" else "null"
+        return """
+            {
+                "messageType": "PAYMENT_RESULT",
+                "screen": "$screen",
+                "data": {
+                    "errorCode": $errCodeJson,
+                    "errorMessage": $errMsgJson,
+                    "paymentDetails": {
+                        "Result": "${resultCode ?: ""}",
+                        "BankResultCode": "${bankResultCode ?: ""}",
+                        "Message": "${(message ?: "").replace("\"", "\\\"")}",
+                        "RequesterTransRefNum": "$transactionId"
+                    }
+                },
+                "transactionId": "$transactionId",
+                "timestamp": ${System.currentTimeMillis()}
+            }
+        """.trimIndent()
+    }
+
+    /**
+     * Build a REVERSAL_RESULT JSON for any reversal/cancellation outcome.
+     */
+    private fun buildReversalResultJson(
+        success: Boolean,
+        transactionId: String,
+        resultCode: String?,
+        message: String?,
+        requesterTransRefNum: String,
+        originalRequesterTransRefNum: String,
+        originalTransactionId: String,
+        reversalAmount: Int
+    ): String {
+        val screen = if (success) "SUCCESS" else "FAILED"
+        val errCodeJson = if (resultCode != null) "\"$resultCode\"" else "null"
+        val errMsgJson = if (message != null) "\"${message.replace("\"", "\\\"")}\"" else "null"
+        return """
+            {
+                "messageType": "REVERSAL_RESULT",
+                "screen": "$screen",
+                "data": {
+                    "errorCode": $errCodeJson,
+                    "errorMessage": $errMsgJson,
+                    "paymentDetails": {
+                        "Result": "${resultCode ?: ""}",
+                        "BankResultCode": "${if (success) "00" else ""}",
+                        "Message": "${(message ?: "").replace("\"", "\\\"")}",
+                        "RequesterTransRefNum": "$requesterTransRefNum",
+                        "OriginalRequesterTransRefNum": "$originalRequesterTransRefNum"
+                    },
+                    "originalTransactionId": "$originalTransactionId",
+                    "reversalAmount": $reversalAmount
+                },
+                "transactionId": "$transactionId",
+                "timestamp": ${System.currentTimeMillis()}
+            }
+        """.trimIndent()
+    }
+
+    private fun savePendingRecoveryTransaction(
+        transactionId: String,
+        amount: Int,
+        originalTrxUniqueId: String,
+        provider: String
+    ) {
+        val json = JSONObject().apply {
+            put("transactionId", transactionId)
+            put("amount", amount)
+            put("originalTrxUniqueId", originalTrxUniqueId)
+            put("provider", provider)
+        }.toString()
+        recoveryPrefs.edit().putString("pending_tx", json).apply()
+        Log.d(TAG, "Saved pending recovery transaction for tx=$transactionId provider=$provider")
+        audit("Persisted pending_tx tx=$transactionId provider=$provider amount=$amount originalTrxId=$originalTrxUniqueId")
+    }
+
+    private fun clearPendingRecoveryTransaction() {
+        recoveryPrefs.edit().remove("pending_tx").apply()
+        audit("Cleared pending_tx")
+    }
+
+    private fun readPendingRecoveryTransaction(): PendingRecoveryTransaction? {
+        val raw = recoveryPrefs.getString("pending_tx", null) ?: return null
+        return try {
+            val json = JSONObject(raw)
+            PendingRecoveryTransaction(
+                transactionId = json.optString("transactionId"),
+                amount = json.optInt("amount"),
+                originalTrxUniqueId = json.optString("originalTrxUniqueId"),
+                provider = json.optString("provider", "nnsmart")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Invalid pending recovery payload, clearing", e)
+            clearPendingRecoveryTransaction()
+            null
+        }
+    }
+
+    private suspend fun recoverPendingTransactionIfAny() {
+        val pending = readPendingRecoveryTransaction() ?: return
+        if (pending.transactionId.isBlank() || pending.originalTrxUniqueId.isBlank()) {
+            Log.w(TAG, "Pending recovery transaction missing required fields, clearing")
+            clearPendingRecoveryTransaction()
+            return
+        }
+        if (!NNSmartPaymentManager.isNNSmartProvider(pending.provider)) {
+            clearPendingRecoveryTransaction()
+            return
+        }
+
+        Log.w(TAG, "Recovering pending NNSmart transaction after restart: tx=${pending.transactionId}")
+        _screenState.value = PaymentScreenState.ReversingTransaction(
+            message = "Recovering previous transaction..."
+        )
+        ensureSocketConnection()
+
+        val requesterRef = "RECOVERY_REVERSAL_${pending.transactionId}"
+        val cancelOk = try {
+            NNSmartPaymentManager.performCancel(
+                context = getApplication(),
+                requesterRef = requesterRef,
+                originalTrxUniqueId = pending.originalTrxUniqueId
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Recovery reversal failed with exception", e)
+            false
+        }
+
+        val resultCode = if (cancelOk) "RECOVERY_REVERSED" else "RECOVERY_REVERSAL_FAILED"
+        val resultMessage = if (cancelOk) {
+            "Recovered after app restart - sale reversed"
+        } else {
+            "Recovered after app restart - reversal failed"
+        }
+        val reversalResultJson = buildReversalResultJson(
+            success = cancelOk,
+            transactionId = pending.transactionId,
+            resultCode = resultCode,
+            message = resultMessage,
+            requesterTransRefNum = requesterRef,
+            originalRequesterTransRefNum = pending.originalTrxUniqueId,
+            originalTransactionId = pending.transactionId,
+            reversalAmount = pending.amount
+        )
+        sendCriticalReversalResult(
+            reversalResultJson = reversalResultJson,
+            reason = "Sale recovery"
+        )
+        clearPendingRecoveryTransaction()
+
+        if (cancelOk) {
+            _screenState.value = PaymentScreenState.ReversalSuccess(
+                message = "Recovered previous transaction successfully."
+            )
+            delay(2200)
+        } else {
+            _screenState.value = PaymentScreenState.TransactionFailed(
+                errorMessage = "Recovery reversal failed - please contact staff"
+            )
+            delay(3000)
+        }
+        requestInitialScreen()
+    }
+
+    private fun savePendingTicketPrintTransaction(
+        transactionId: String,
+        amount: Int,
+        originalRequesterRef: String,
+        provider: String
+    ) {
+        val json = JSONObject().apply {
+            put("transactionId", transactionId)
+            put("amount", amount)
+            put("originalRequesterRef", originalRequesterRef)
+            put("provider", provider)
+        }.toString()
+        recoveryPrefs.edit().putString("pending_ticket_tx", json).apply()
+        Log.d(TAG, "Saved pending ticket-print transaction for tx=$transactionId")
+        audit("Persisted pending_ticket_tx tx=$transactionId provider=$provider amount=$amount originalRef=$originalRequesterRef")
+    }
+
+    private fun clearPendingTicketPrintTransaction() {
+        recoveryPrefs.edit().remove("pending_ticket_tx").apply()
+        audit("Cleared pending_ticket_tx")
+    }
+
+    private fun savePendingCriticalMessage(rawJson: String) {
+        recoveryPrefs.edit().putString("pending_critical_message", rawJson).apply()
+        audit("Persisted pending_critical_message bytes=${rawJson.length}")
+    }
+
+    private fun readPendingCriticalMessage(): String? =
+        recoveryPrefs.getString("pending_critical_message", null)
+
+    private fun clearPendingCriticalMessage() {
+        recoveryPrefs.edit().remove("pending_critical_message").apply()
+        audit("Cleared pending_critical_message")
+    }
+
+    private fun sendCriticalReversalResult(reversalResultJson: String, reason: String) {
+        val sent = socketManager.sendMessage(reversalResultJson)
+        Log.d(TAG, "$reason REVERSAL_RESULT send result: $sent")
+        audit("$reason REVERSAL_RESULT send attempted sent=$sent payload=$reversalResultJson")
+        if (!sent) {
+            Log.w(TAG, "Failed to deliver REVERSAL_RESULT, persisting for retry")
+            savePendingCriticalMessage(reversalResultJson)
+        } else {
+            clearPendingCriticalMessage()
+        }
+    }
+
+    private fun flushPendingCriticalMessages() {
+        val pendingMessage = readPendingCriticalMessage() ?: return
+        if (!socketManager.isConnected()) return
+        val sent = socketManager.sendMessage(pendingMessage)
+        Log.d(TAG, "Retry pending critical message send result: $sent")
+        audit("Retry pending_critical_message sent=$sent bytes=${pendingMessage.length}")
+        if (sent) {
+            clearPendingCriticalMessage()
+        }
+    }
+
+    private fun readPendingTicketPrintTransaction(): PendingTicketPrintTransaction? {
+        val raw = recoveryPrefs.getString("pending_ticket_tx", null) ?: return null
+        return try {
+            val json = JSONObject(raw)
+            PendingTicketPrintTransaction(
+                transactionId = json.optString("transactionId"),
+                amount = json.optInt("amount"),
+                originalRequesterRef = json.optString("originalRequesterRef"),
+                provider = json.optString("provider", "nnsmart")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Invalid pending ticket-print payload, clearing", e)
+            clearPendingTicketPrintTransaction()
+            null
+        }
+    }
+
+    private fun scheduleDisconnectRecoveryIfNeeded() {
+        if (disconnectRecoveryJob?.isActive == true) return
+        if (readPendingTicketPrintTransaction() == null) return
+        disconnectRecoveryJob = viewModelScope.launch {
+            // Grace period for brief network blips.
+            delay(20000)
+            if (!socketManager.isConnected() && readPendingTicketPrintTransaction() != null) {
+                Log.w(TAG, "Prolonged disconnect with pending ticket state; starting protective reversal")
+                audit("Prolonged disconnect threshold reached; protective reversal starts")
+                recoverPendingTicketNotPrintedIfAny()
+            }
+        }
+    }
+
+    private suspend fun recoverPendingTicketNotPrintedIfAny() {
+        if (isRecoveryInProgress) return
+        val pending = readPendingTicketPrintTransaction() ?: return
+        if (pending.transactionId.isBlank() || pending.originalRequesterRef.isBlank()) {
+            clearPendingTicketPrintTransaction()
+            return
+        }
+        isRecoveryInProgress = true
+
+        try {
+            Log.w(TAG, "Recovering ticket-not-printed transaction: tx=${pending.transactionId}")
+            _screenState.value = PaymentScreenState.ReversingTransaction(
+                message = "Ticket not confirmed. Reversing transaction..."
+            )
+            ensureSocketConnection()
+
+            val recoveryRef = "RECOVERY_TICKET_REVERSAL_${pending.transactionId}"
+            val reversalResult = try {
+                when {
+                    pending.provider == "mock" -> MockPaymentManager.performSaleReversal(
+                        amountFormatted = String.format("%.2f", pending.amount.toDouble()),
+                        requesterRef = recoveryRef,
+                        originalRequesterRef = pending.originalRequesterRef
+                    )
+                    NNSmartPaymentManager.isNNSmartProvider(pending.provider) -> {
+                        val ok = NNSmartPaymentManager.performCancel(
+                            context = getApplication(),
+                            requesterRef = recoveryRef,
+                            originalTrxUniqueId = pending.originalRequesterRef
+                        )
+                        app.sst.pinto.payment.PlanetPaymentResult(
+                            success = ok,
+                            resultCode = if (ok) "TICKET_NOT_PRINTED_RECOVERY_REVERSED" else "TICKET_NOT_PRINTED_RECOVERY_FAILED",
+                            bankResultCode = if (ok) "00" else null,
+                            message = if (ok) "Ticket not confirmed after restart - sale reversed" else "Ticket not confirmed after restart - reversal failed",
+                            requesterTransRefNum = recoveryRef,
+                            rawOptions = emptyMap()
+                        )
+                    }
+                    else -> PlanetPaymentManager.performSaleReversal(
+                        amountFormatted = String.format("%.2f", pending.amount.toDouble()),
+                        requesterRef = recoveryRef,
+                        originalRequesterRef = pending.originalRequesterRef
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Ticket recovery reversal exception", e)
+                app.sst.pinto.payment.PlanetPaymentResult(
+                    success = false,
+                    resultCode = "TICKET_NOT_PRINTED_RECOVERY_EXCEPTION",
+                    bankResultCode = null,
+                    message = "Ticket recovery reversal exception: ${e.message}",
+                    requesterTransRefNum = recoveryRef,
+                    rawOptions = emptyMap()
+                )
+            }
+
+            val reversalResultJson = buildReversalResultJson(
+                success = reversalResult.success,
+                transactionId = pending.transactionId,
+                resultCode = reversalResult.resultCode,
+                message = reversalResult.message,
+                requesterTransRefNum = recoveryRef,
+                originalRequesterTransRefNum = pending.originalRequesterRef,
+                originalTransactionId = pending.transactionId,
+                reversalAmount = pending.amount
+            )
+            sendCriticalReversalResult(
+                reversalResultJson = reversalResultJson,
+                reason = "Ticket recovery"
+            )
+            clearPendingTicketPrintTransaction()
+            lastSuccessfulSale = null
+
+            if (reversalResult.success) {
+                _screenState.value = PaymentScreenState.ReversalSuccess(
+                    message = "Previous transaction reversed (ticket not confirmed)."
+                )
+                delay(2200)
+            } else {
+                _screenState.value = PaymentScreenState.TransactionFailed(
+                    errorMessage = "Ticket recovery reversal failed - contact staff"
+                )
+                delay(3000)
+            }
+            requestInitialScreen()
+        } finally {
+            isRecoveryInProgress = false
+        }
+    }
+
+    /**
+     * NNSmart-specific post-limit-check flow.
+     *
+     * By the time we get here the sale has already been captured on the
+     * terminal, so:
+     *   - approved  → jump straight to the success path, exactly like the
+     *                 post-sale branch of the Integra flow.
+     *   - rejected  → reverse the sale via NNSmart Cancellation, then show
+     *                 LimitError. If the reversal itself fails we surface a
+     *                 TransactionFailed with a clear "contact staff" message.
+     */
+    private fun continueNnsmartPaymentAfterLimitCheck(
+        approved: Boolean,
+        transactionId: String,
+        errorMessage: String,
+        saleResult: NNSmartPaymentResult
+    ) {
+        if (approved) {
+            Log.d(TAG, "NNSmart: limit approved, completing success flow")
+
+            // Record the sale so a later server-initiated refund can reverse it.
+            lastSuccessfulSale = SuccessfulSaleTransaction(
+                transactionId = transactionId,
+                amount = currentAmount,
+                requesterTransRefNum = saleResult.originalTrxUniqueId ?: transactionId
+            )
+            savePendingTicketPrintTransaction(
+                transactionId = transactionId,
+                amount = currentAmount,
+                originalRequesterRef = saleResult.originalTrxUniqueId ?: transactionId,
+                provider = "nnsmart"
+            )
+
+            // Tell the server the payment succeeded.
+            val paymentResultJson = buildPaymentResultJson(
+                success = true,
+                transactionId = transactionId,
+                resultCode = saleResult.resultCode ?: "A",
+                message = saleResult.message ?: "APPROVED",
+                bankResultCode = "00"
+            )
+            Log.d(TAG, "NNSmart: sending PAYMENT_RESULT (success) to backend")
+            Log.d(TAG, "NNSmart: PAYMENT_RESULT payload: $paymentResultJson")
+            val sent = socketManager.sendMessage(paymentResultJson)
+            Log.d(TAG, "NNSmart: PAYMENT_RESULT send result: $sent")
+
+            _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = true)
+            pendingNnsmartSale = null
+            clearPendingRecoveryTransaction()
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+            return
+        }
+
+        // Rejected by backend limit check:
+        // 1) show limit error
+        // 2) show reversal in progress
+        // 3) show reversal outcome
+        Log.d(TAG, "NNSmart: limit rejected, showing limit error before reversal")
+        _screenState.value = PaymentScreenState.LimitError(
+            errorMessage = errorMessage
+        )
+        allowNavigationFromLimitError = false
+        viewModelScope.launch {
+            delay(1200)
+            _screenState.value = PaymentScreenState.ReversingTransaction(
+                message = "Limit exceeded. Reversing card transaction..."
+            )
+
+            val cancelOk = try {
+                val trxId = saleResult.originalTrxUniqueId
+                if (trxId.isNullOrBlank()) {
+                    Log.e(TAG, "NNSmart: cannot reverse sale — originalTrxUniqueId is missing")
+                    false
+                } else {
+                    NNSmartPaymentManager.performCancel(
+                        context = getApplication(),
+                        requesterRef = "REVERSAL_$transactionId",
+                        originalTrxUniqueId = trxId
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "NNSmart: error reversing sale", e)
+                false
+            }
+
+            // Notify the server reversal outcome via REVERSAL_RESULT.
+            val reversalResultCode = if (cancelOk) "LIMIT_REVERSED" else "LIMIT_REVERSAL_FAILED"
+            val reversalMessage = if (cancelOk) "Limit exceeded - sale reversed" else "Limit exceeded - REVERSAL FAILED"
+            val reversalResultJson = buildReversalResultJson(
+                success = cancelOk,
+                transactionId = transactionId,
+                resultCode = reversalResultCode,
+                message = reversalMessage,
+                requesterTransRefNum = "REVERSAL_$transactionId",
+                originalRequesterTransRefNum = saleResult.originalTrxUniqueId ?: transactionId,
+                originalTransactionId = transactionId,
+                reversalAmount = currentAmount
+            )
+            Log.d(TAG, "NNSmart: sending REVERSAL_RESULT (limit-rejected) to backend")
+            Log.d(TAG, "NNSmart: REVERSAL_RESULT payload: $reversalResultJson")
+            val sent = socketManager.sendMessage(reversalResultJson)
+            Log.d(TAG, "NNSmart: REVERSAL_RESULT send result: $sent")
+
+            if (cancelOk) {
+                clearPendingTicketPrintTransaction()
+                _screenState.value = PaymentScreenState.ReversalSuccess(
+                    message = "Limit exceeded. Card transaction reversed successfully."
+                )
+                viewModelScope.launch {
+                    delay(2500)
+                    requestInitialScreen()
+                }
+            } else {
+                clearPendingTicketPrintTransaction()
+                // Reversal failed — this is rare but needs operator attention.
+                _screenState.value = PaymentScreenState.TransactionFailed(
+                    errorMessage = "Please contact staff - reversal failed"
+                )
+                viewModelScope.launch {
+                    delay(6000)
+                    requestInitialScreen()
+                }
+            }
+
+            pendingNnsmartSale = null
+            clearPendingRecoveryTransaction()
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+        }
+    }
+
+    /**
      * Continue payment processing after limit check result is received.
      * This is called when LIMIT_CHECK_RESULT message is received from server.
      */
     private fun continuePaymentAfterLimitCheck(approved: Boolean, transactionId: String, errorMessage: String = "Daily spending limit exceeded") {
+        // If a pending NNSmart sale is tracked, the sale has already been
+        // taken on the terminal — handle this branch separately because
+        // "rejected" here means we must REVERSE an already-successful sale.
+        val nnsmartSale = pendingNnsmartSale
+        if (nnsmartSale != null) {
+            continueNnsmartPaymentAfterLimitCheck(
+                approved = approved,
+                transactionId = transactionId,
+                errorMessage = errorMessage,
+                saleResult = nnsmartSale
+            )
+            return
+        }
+
         // If payment is not in progress but we received a LIMIT_ERROR, still show the error screen
         // This can happen if ViewModel was recreated (e.g., after activity restart)
         if (!approved && !isProcessingPayment) {
@@ -712,6 +1403,12 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         amount = currentAmount,
                         requesterTransRefNum = saleResult.requesterTransRefNum ?: transactionId
                     )
+                    savePendingTicketPrintTransaction(
+                        transactionId = transactionId,
+                        amount = currentAmount,
+                        originalRequesterRef = saleResult.requesterTransRefNum ?: transactionId,
+                        provider = paymentProvider
+                    )
                     Log.d(TAG, "Stored successful sale transaction: $lastSuccessfulSale")
                     _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = true)
                 } else {
@@ -787,6 +1484,9 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Reset flags when cancelling
         isProcessingPayment = false
         isHandlingPaymentLocally = false
+        pendingCardCheckResult = null
+        pendingNnsmartSale = null
+        clearPendingRecoveryTransaction()
 
         if (isTimeout) {
             Log.d(TAG, "Canceling payment due to timeout")
@@ -880,6 +1580,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Reset flags when starting a new screen flow
         isProcessingPayment = false
         isHandlingPaymentLocally = false
+        pendingNnsmartSale = null
+        clearPendingRecoveryTransaction()
 
         // Check if we have a valid server URL
         if (serverUrl.isEmpty()) {
@@ -1130,6 +1832,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 return
             }
             "AMOUNT_SELECT" -> {
+                clearPendingTicketPrintTransaction()
                 val data = message.data
                 if (data != null && data.amounts != null && data.currency != null) {
                     Log.d(TAG, "Changing to AMOUNT_SELECT screen with ${data.amounts.size} amounts")
@@ -1253,17 +1956,13 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             "COLLECT_TICKET" -> {
                 Log.d(TAG, "Changing to COLLECT_TICKET screen")
+                clearPendingTicketPrintTransaction()
                 _screenState.value = PaymentScreenState.CollectTicket
                 _isOnAmountScreen.value = false
             }
             "THANK_YOU" -> {
                 Log.d(TAG, "Changing to THANK_YOU screen")
-                // #region agent log
-                try {
-                    val logData = """{"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"PaymentViewModel.kt:1211","message":"THANK_YOU screen change initiated","data":{"previousScreen":"${_screenState.value::class.simpleName}"},"timestamp":${System.currentTimeMillis()}}"""
-                    java.io.File("d:\\Development\\PintoAndroidApp\\.cursor\\debug.log").appendText(logData + "\n")
-                } catch (e: Exception) {}
-                // #endregion
+                clearPendingTicketPrintTransaction()
                 _screenState.value = PaymentScreenState.ThankYou
                 _isOnAmountScreen.value = false
             }
@@ -1385,7 +2084,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         transactionFeeType = data.transactionFeeType ?: existingInfo?.transactionFeeType ?: "FIXED",
                         transactionFeeValue = data.transactionFeeValue ?: existingInfo?.transactionFeeValue ?: 0.50,
                         yaspaEnabled = data.yaspaEnabled ?: existingInfo?.yaspaEnabled ?: true,
-                        paymentProvider = data.paymentProvider ?: existingInfo?.paymentProvider ?: "integra",
+                        paymentProvider = data.paymentProvider ?: existingInfo?.paymentProvider ?: "nnsmart",
                         requireCardReceipt = data.requireCardReceipt ?: existingInfo?.requireCardReceipt ?: true
                     )
                     
@@ -1515,16 +2214,40 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
                 
-                // Get transaction details from message or use last successful sale
+                // Get payment provider
+                val database = AppDatabase.getDatabase(getApplication())
+                val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
+                val paymentProvider = deviceInfo?.paymentProvider?.lowercase() ?: "nnsmart"
+                
+                // Get transaction details from message or use last successful sale.
                 val originalTransactionId = message.data?.originalTransactionId ?: lastSale.transactionId
-                // Ensure we have a non-null originalRequesterRef (use transactionId as fallback)
-                // Since lastSale.transactionId is always non-null, the result is guaranteed to be non-null
-                val originalRequesterRef = message.data?.originalRequesterTransRefNum 
-                    ?: lastSale.requesterTransRefNum 
-                    ?: lastSale.transactionId // lastSale.transactionId is String (non-null), so result is String
+                val backendOriginalRequesterRef = message.data?.originalRequesterTransRefNum
+                val localOriginalRequesterRef = lastSale.requesterTransRefNum
+                // For NNSmart, prefer the locally stored terminal trx id because
+                // cancellation `payment_ref` must be the terminal-side id.
+                val originalRequesterRef = if (NNSmartPaymentManager.isNNSmartProvider(paymentProvider)) {
+                    localOriginalRequesterRef ?: backendOriginalRequesterRef ?: lastSale.transactionId
+                } else {
+                    backendOriginalRequesterRef ?: localOriginalRequesterRef ?: lastSale.transactionId
+                }
                 val reversalAmount = message.data?.reversalAmount ?: lastSale.amount
                 
-                Log.d(TAG, "Processing reversal: originalTxId=$originalTransactionId, originalRef=$originalRequesterRef, amount=$reversalAmount")
+                if (
+                    NNSmartPaymentManager.isNNSmartProvider(paymentProvider) &&
+                    !backendOriginalRequesterRef.isNullOrBlank() &&
+                    !localOriginalRequesterRef.isNullOrBlank() &&
+                    backendOriginalRequesterRef != localOriginalRequesterRef
+                ) {
+                    Log.w(
+                        TAG,
+                        "NNSmart reversal ref mismatch: backendRef=$backendOriginalRequesterRef localRef=$localOriginalRequesterRef - using localRef"
+                    )
+                }
+                
+                Log.d(
+                    TAG,
+                    "Processing reversal: provider=$paymentProvider originalTxId=$originalTransactionId originalRef=$originalRequesterRef amount=$reversalAmount"
+                )
                 
                 // Hide screensaver if visible (user initiated reversal, so they're active)
                 _isScreensaverVisible.value = false
@@ -1533,11 +2256,6 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 _screenState.value = PaymentScreenState.RefundProcessing(
                     errorMessage = "Processing refund..."
                 )
-                
-                // Get payment provider
-                val database = AppDatabase.getDatabase(getApplication())
-                val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
-                val paymentProvider = deviceInfo?.paymentProvider?.lowercase() ?: "integra"
                 
                 val amountFormatted = String.format("%.2f", reversalAmount.toDouble())
                 // Generate a unique reversal reference (don't double-prefix if transactionId already has REVERSAL_)
@@ -1549,14 +2267,32 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 
                 // Perform reversal
                 Log.d(TAG, "Performing sale reversal with provider: $paymentProvider, amount: $amountFormatted")
-                val reversalResult = if (paymentProvider == "mock") {
-                    MockPaymentManager.performSaleReversal(
+                val reversalResult = when {
+                    paymentProvider == "mock" -> MockPaymentManager.performSaleReversal(
                         amountFormatted = amountFormatted,
                         requesterRef = reversalRef,
                         originalRequesterRef = originalRequesterRef
                     )
-                } else {
-                    PlanetPaymentManager.performSaleReversal(
+                    NNSmartPaymentManager.isNNSmartProvider(paymentProvider) -> {
+                        // NNSmart uses CANCELLATION (not a separate reversal
+                        // request) and needs the original transaction id as
+                        // payment_ref. Use the stored originalRequesterRef
+                        // which, for NNSmart, holds trxData.id.
+                        val ok = NNSmartPaymentManager.performCancel(
+                            context = getApplication(),
+                            requesterRef = reversalRef,
+                            originalTrxUniqueId = originalRequesterRef
+                        )
+                        app.sst.pinto.payment.PlanetPaymentResult(
+                            success = ok,
+                            resultCode = if (ok) "A" else "REVERSAL_FAILED",
+                            bankResultCode = if (ok) "00" else null,
+                            message = if (ok) "REVERSAL_APPROVED" else "Reversal failed on terminal",
+                            requesterTransRefNum = reversalRef,
+                            rawOptions = emptyMap()
+                        )
+                    }
+                    else -> PlanetPaymentManager.performSaleReversal(
                         amountFormatted = amountFormatted,
                         requesterRef = reversalRef,
                         originalRequesterRef = originalRequesterRef
@@ -1592,6 +2328,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     Log.d(TAG, "Reversal successful - showing success screen")
                     // Clear the last successful sale since it's been reversed
                     lastSuccessfulSale = null
+                    // Clear pending ticket-print recovery marker so a future
+                    // disconnect/restart cannot re-target this already
+                    // reversed transaction.
+                    clearPendingTicketPrintTransaction()
+                    clearPendingRecoveryTransaction()
                     
                     // Ensure screensaver is hidden to show success screen
                     _isScreensaverVisible.value = false

@@ -1,6 +1,7 @@
 package app.sst.pinto.network
 
 import android.util.Log
+import app.sst.pinto.utils.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -20,6 +21,28 @@ import java.util.concurrent.TimeUnit
 
 class SocketManager private constructor() {
     private val TAG = "SocketManager"
+    private var fileLogger: FileLogger? = null
+
+    private fun logDebug(message: String) {
+        if (fileLogger != null) {
+            fileLogger?.d(TAG, message)
+        } else {
+            Log.d(TAG, message)
+        }
+    }
+
+    private fun logError(message: String, t: Throwable? = null) {
+        if (fileLogger != null) {
+            fileLogger?.e(TAG, message, t)
+        } else {
+            Log.e(TAG, message, t)
+        }
+    }
+
+    fun configureLogging(logger: FileLogger) {
+        fileLogger = logger
+        logDebug("SocketManager file logging configured")
+    }
 
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS) // No timeout for WebSockets
@@ -47,12 +70,12 @@ class SocketManager private constructor() {
         serverUrl = url
         // Don't connect if already connected or connecting
         if (_connectionState.value == ConnectionState.CONNECTED) {
-            Log.d(TAG, "Already connected")
+            logDebug("Already connected")
             return
         }
         
         if (_connectionState.value == ConnectionState.CONNECTING) {
-            Log.d(TAG, "Connection already in progress, skipping duplicate connect request")
+            logDebug("Connection already in progress, skipping duplicate connect request")
             return
         }
 
@@ -77,19 +100,19 @@ class SocketManager private constructor() {
      * Useful after screensaver or timeout periods.
      */
     fun ensureConnected() {
-        Log.d(TAG, "Ensuring socket connection is active")
+        logDebug("Ensuring socket connection is active")
         when (_connectionState.value) {
             ConnectionState.CONNECTED -> {
-                Log.d(TAG, "Already connected to $serverUrl")
+                logDebug("Already connected to $serverUrl")
                 // Send a small ping message to verify connection is still alive
                 val pingSuccess = webSocket?.send("{\"ping\":true}")
-                Log.d(TAG, "Sent ping message, result: $pingSuccess")
+                logDebug("Sent ping message, result: $pingSuccess")
             }
             ConnectionState.CONNECTING -> {
-                Log.d(TAG, "Connection already in progress, waiting for it to complete")
+                logDebug("Connection already in progress, waiting for it to complete")
             }
             ConnectionState.DISCONNECTED -> {
-                Log.d(TAG, "Not connected, attempting reconnection to $serverUrl")
+                logDebug("Not connected, attempting reconnection to $serverUrl")
                 connect(serverUrl)
             }
         }
@@ -105,19 +128,19 @@ class SocketManager private constructor() {
         return if (_connectionState.value == ConnectionState.CONNECTED) {
             webSocket?.send(message) ?: false
         } else {
-            Log.e(TAG, "Cannot send message, not connected")
+            logError("Cannot send message, not connected")
             false
         }
     }
 
     private val socketListener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            Log.d(TAG, "WebSocket connection opened")
+            logDebug("WebSocket connection opened")
             _connectionState.value = ConnectionState.CONNECTED
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
-            Log.d(TAG, "Message received: $text")
+            logDebug("Message received: $text")
             // Emit message in a coroutine scope to ensure thread safety
             // tryEmit is non-blocking and thread-safe, but using emit in a coroutine is safer
             messageScope.launch {
@@ -126,12 +149,12 @@ class SocketManager private constructor() {
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            Log.d(TAG, "WebSocket connection closed: $reason")
+            logDebug("WebSocket connection closed: $reason")
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            Log.e(TAG, "WebSocket failure: ${t.message}")
+            logError("WebSocket failure: ${t.message}", t)
             _connectionState.value = ConnectionState.DISCONNECTED
 
             // Implement reconnection logic here

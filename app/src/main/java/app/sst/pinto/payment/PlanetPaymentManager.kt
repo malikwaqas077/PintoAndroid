@@ -1,6 +1,7 @@
 package app.sst.pinto.payment
 
 import android.util.Log
+import app.sst.pinto.utils.FileLogger
 import app.sst.pinto.utils.getDeviceIpAddress
 import integrate_clientsdk.CommunicationContext
 import integrate_clientsdk.Error.ErrorType
@@ -56,6 +57,37 @@ data class CardCheckResult(
 object PlanetPaymentManager {
 
     private const val TAG = "PlanetPaymentManager"
+    private var fileLogger: FileLogger? = null
+
+    private fun logDebug(message: String) {
+        if (fileLogger != null) {
+            fileLogger?.d(TAG, message)
+        } else {
+            Log.d(TAG, message)
+        }
+    }
+
+    private fun logWarn(message: String, t: Throwable? = null) {
+        if (fileLogger != null) {
+            fileLogger?.w(TAG, message)
+            if (t != null) fileLogger?.e(TAG, "Warning throwable detail", t)
+        } else {
+            Log.w(TAG, message, t)
+        }
+    }
+
+    private fun logError(message: String, t: Throwable? = null) {
+        if (fileLogger != null) {
+            fileLogger?.e(TAG, message, t)
+        } else {
+            Log.e(TAG, message, t)
+        }
+    }
+
+    fun configureLogging(logger: FileLogger) {
+        fileLogger = logger
+        logDebug("PlanetPaymentManager file logging configured")
+    }
 
     // TODO: make port configurable (e.g. via Config screen or server config)
     private const val DEFAULT_TERMINAL_PORT = "1234"

@@ -12,9 +12,8 @@ android {
         applicationId = "app.sst.pinto"
         minSdk = 25
         targetSdk = 34
-        // Bumped for screensaver download feature and fixes
-        versionCode = 4
-        versionName = "2.1"
+        versionCode = 5
+        versionName = "2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -96,6 +95,7 @@ dependencies {
     implementation ("androidx.media3:media3-ui:1.2.0")
     implementation ("androidx.media3:media3-common:1.2.0")
 
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

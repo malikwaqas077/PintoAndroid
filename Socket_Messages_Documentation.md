@@ -68,6 +68,11 @@ The `data` object can contain the following fields (all optional, depending on m
 **Payment Processing:**
 - `cardToken`: String - Card token from CardCheckEmv for daily limit validation
 - `paymentDetails`: Map<String, String> - Raw payment details from Planet SDK
+  - `paymentDetails.Result` examples:
+    - `"A"`: Approved sale
+    - `"D"`: Declined sale
+    - `"LIMIT_REVERSED"`: Daily limit rejected after sale; client successfully reversed/cancelled the sale on terminal (reported via `REVERSAL_RESULT`)
+    - `"LIMIT_REVERSAL_FAILED"`: Daily limit rejected after sale; client attempted reversal but terminal reversal failed/timed out (reported via `REVERSAL_RESULT`)
 - `paymentUrl`: String - URL for QR code payment
 
 **Device Information:**
@@ -445,6 +450,52 @@ Or if payment failed:
     "timestamp": 1619456797000
 }
 ```
+
+### 5.1 LIMIT_CHECK rejection outcomes (NNSmart / sale-first flows)
+
+When the server rejects the daily limit check **after** the card terminal already approved the sale, the client attempts a terminal reversal and sends `REVERSAL_RESULT` with the reversal outcome.
+
+Reversal succeeded:
+
+```json
+{
+    "messageType": "REVERSAL_RESULT",
+    "screen": "SUCCESS",
+    "data": {
+        "errorCode": "LIMIT_REVERSED",
+        "errorMessage": "Limit exceeded - sale reversed",
+        "paymentDetails": {
+            "Result": "LIMIT_REVERSED",
+            "BankResultCode": "N/A",
+            "Message": "Limit exceeded - sale reversed"
+        }
+    },
+    "transactionId": "T123456",
+    "timestamp": 1619456797000
+}
+```
+
+Reversal failed:
+
+```json
+{
+    "messageType": "REVERSAL_RESULT",
+    "screen": "FAILED",
+    "data": {
+        "errorCode": "LIMIT_REVERSAL_FAILED",
+        "errorMessage": "Limit exceeded - REVERSAL FAILED",
+        "paymentDetails": {
+            "Result": "LIMIT_REVERSAL_FAILED",
+            "BankResultCode": "N/A",
+            "Message": "Limit exceeded - REVERSAL FAILED"
+        }
+    },
+    "transactionId": "T123456",
+    "timestamp": 1619456797000
+}
+```
+
+> Note: `LIMIT_REVERSED` and `LIMIT_REVERSAL_FAILED` are **result codes** carried in reversal payload fields (`data.errorCode` and `data.paymentDetails.Result`), not new `messageType` values.
 
 
 # 6. Transaction Result 
@@ -1320,4 +1371,65 @@ The server can instruct the client to restart the application by sending a RESTA
 ---
 
 This document covers the essential communication protocol between the Android client and backend server. Adjustments may be needed based on specific backend implementation details or additional business requirements.
+
+## Quick Sequence Diagrams
+
+### A) Normal Card Payment (Approved)
+
+```mermaid
+sequenceDiagram
+    participant S as Server
+    participant A as Android App
+    participant T as Terminal SDK
+
+    S->>A: SCREEN_CHANGE(AMOUNT_SELECT)
+    A->>S: USER_ACTION(selectedAmount)
+    S->>A: SCREEN_CHANGE(PAYMENT_METHOD)
+    A->>S: USER_ACTION(selectedMethod=DEBIT_CARD)
+    A->>T: Card check / sale steps (local)
+    A->>S: CARD_CHECK_RESULT(cardToken/PAR, selectedAmount)
+    S->>A: LIMIT_CHECK_RESULT(APPROVED)
+    A->>T: Complete payment locally
+    A->>S: PAYMENT_RESULT(SUCCESS/FAILED)
+    S->>A: SCREEN_CHANGE(RECEIPT_QUESTION/PRINT_TICKET/...)
+```
+
+### B) Limit Rejected After Sale (Sale-First Reversal)
+
+```mermaid
+sequenceDiagram
+    participant S as Server
+    participant A as Android App
+    participant T as Terminal SDK
+
+    A->>S: CARD_CHECK_RESULT(cardToken/PAR, selectedAmount)
+    S->>A: LIMIT_CHECK_RESULT(LIMIT_ERROR / REJECTED)
+    A->>A: Show LIMIT_ERROR screen
+    A->>A: Show ReversingTransaction screen
+    A->>T: CANCELLATION(payment_ref=originalTrxId)
+    alt Reversal successful
+        A->>S: REVERSAL_RESULT(SUCCESS, errorCode=LIMIT_REVERSED)
+        A->>A: Show ReversalSuccess screen
+    else Reversal failed
+        A->>S: REVERSAL_RESULT(FAILED, errorCode=LIMIT_REVERSAL_FAILED)
+        A->>A: Show TransactionFailed(contact staff)
+    end
+    A->>S: USER_ACTION(RESET) / requestInitialScreen()
+```
+
+### C) Server-Initiated Reversal / Refund
+
+```mermaid
+sequenceDiagram
+    participant S as Server
+    participant A as Android App
+    participant T as Terminal SDK
+
+    S->>A: REVERSAL_REQUEST (or REFUND_REQUEST)
+    A->>A: Show REFUND_PROCESSING
+    A->>T: Perform reversal/cancellation
+    A->>S: REVERSAL_RESULT(SUCCESS/FAILED)
+    A->>A: Show local success/failed screen
+    A->>S: USER_ACTION(RESET) / requestInitialScreen()
+```
 
