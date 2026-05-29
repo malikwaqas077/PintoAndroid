@@ -1,6 +1,7 @@
 package app.sst.pinto
 
 import android.os.Bundle
+import android.os.Build
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -46,6 +47,7 @@ import app.sst.pinto.data.AppDatabase
 import app.sst.pinto.network.SocketManager
 import app.sst.pinto.payment.NNSmartPaymentManager
 import app.sst.pinto.utils.FileLogger
+import app.sst.pinto.utils.ImmersiveModeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -58,6 +60,24 @@ class MainActivity : ComponentActivity() {
     private lateinit var fileLogger: FileLogger
 
     private var isReady = false
+
+    private fun isLikelyNewlandDevice(): Boolean {
+        val fingerprint = buildString {
+            append(Build.MANUFACTURER ?: "")
+            append(' ')
+            append(Build.BRAND ?: "")
+            append(' ')
+            append(Build.MODEL ?: "")
+            append(' ')
+            append(Build.DEVICE ?: "")
+            append(' ')
+            append(Build.PRODUCT ?: "")
+        }.lowercase()
+
+        return fingerprint.contains("u2000") ||
+            fingerprint.contains("newland") ||
+            fingerprint.contains("bengal")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen().setKeepOnScreenCondition { !isReady }
@@ -103,7 +123,7 @@ class MainActivity : ComponentActivity() {
                 null
             } ?: "nnsmart"
 
-            if (provider == "integra") {
+            if (provider == "integra" && !isLikelyNewlandDevice()) {
                 Log.d(TAG, "Payment provider = integra, initializing Planet SDK")
                 app.sst.pinto.payment.PlanetPaymentManager.initializeLoggerAsync { isAvailable ->
                     if (isAvailable) {
@@ -124,6 +144,11 @@ class MainActivity : ComponentActivity() {
                         Log.w(TAG, "Planet SDK is not available on this device - payment features will be disabled")
                     }
                 }
+            } else if (provider == "integra") {
+                Log.w(
+                    TAG,
+                    "Payment provider is integra but device looks like Newland/U2000; skipping Planet SDK preload to avoid native crash"
+                )
             } else {
                 Log.d(TAG, "Payment provider = $provider, skipping Planet SDK initialization")
             }
@@ -149,59 +174,25 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupFullscreen() {
-        Log.d(TAG, "Setting up fullscreen mode")
-
-        // Method 1: Using WindowCompat (modern approach)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.apply {
-            // Hide both status bar and navigation bar
-            hide(WindowInsetsCompat.Type.systemBars())
-            // Set sticky immersive behavior
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-
-        // Method 2: Using window flags (additional safety)
-        window.apply {
-            // Keep screen on
-            addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            // Full screen flags
-            addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            // Hide navigation bar
-            addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-        }
-
-        // Method 3: System UI visibility flags (legacy but effective)
-        window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_LOW_PROFILE
-                )
-
-        Log.d(TAG, "Fullscreen setup complete")
+        ImmersiveModeHelper.setupFullscreen(this)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        Log.d(TAG, "Window focus changed: $hasFocus")
-        if (hasFocus) {
-            // Re-apply fullscreen when window regains focus
-            setupFullscreen()
-        }
+        ImmersiveModeHelper.onWindowFocus(this, hasFocus)
     }
 
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "onResume called")
-        // Reset timeout timer when app comes back to foreground
         timeoutManager.recordUserInteraction()
-        // Re-apply fullscreen mode
-        setupFullscreen()
+        ImmersiveModeHelper.onResume(this)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Kiosk mode: swallow the back button so tapping it on the transient
+        // system nav bar can't exit the activity.
     }
 
     override fun onUserInteraction() {
@@ -217,12 +208,8 @@ class MainActivity : ComponentActivity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    override fun onPause() {
-        super.onPause()
-        Log.d(TAG, "onPause called")
-    }
-
     override fun onDestroy() {
+        ImmersiveModeHelper.cleanup(this)
         super.onDestroy()
         Log.d(TAG, "onDestroy called")
         // Clean up Planet SDK resources

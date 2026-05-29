@@ -12,8 +12,8 @@ android {
         applicationId = "app.sst.pinto"
         minSdk = 25
         targetSdk = 34
-        versionCode = 5
-        versionName = "2.2"
+        versionCode = 6
+        versionName = "2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

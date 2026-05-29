@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.Log
 import app.sst.pinto.utils.FileLogger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -16,6 +17,21 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.util.UUID
 import kotlin.coroutines.resume
+
+/**
+ * Result of an NNSmart Card Verification pre-check.
+ *
+ * The Card Verification feature allows us to obtain the PAR (Payment Account
+ * Reference) BEFORE the payment is captured. After receiving this result we
+ * must either confirm or cancel within 30 seconds.
+ */
+data class NNSmartCardVerificationResult(
+    val success: Boolean,
+    val par: String? = null,
+    val transactionId: String? = null,
+    val message: String? = null,
+    val rawResponse: String? = null
+)
 
 /**
  * Result of an NNSmart SALE / REFUND.
@@ -95,18 +111,320 @@ object NNSmartPaymentManager {
     // Broadcast actions defined by the NNSmart integration spec.
     private const val ACTION_REQUEST = "com.newnote.nsmart.ecr.request"
     private const val ACTION_REQUEST_BACKGROUND = "com.newnote.nsmart.ecr.background.request"
+    private const val ACTION_CARD_VERIFICATION = "com.newnote.nsmart.ecr.request.cv"
+    private const val ACTION_CARD_VERIFICATION_CONFIRM = "com.newnote.nsmart.ecr.request.cv.confirm"
+    private const val ACTION_CARD_VERIFICATION_CANCEL = "com.newnote.nsmart.ecr.request.cv.cancel"
 
     // Ensure only one terminal interaction runs at a time (sale or cancel).
     private val transactionMutex = Mutex()
 
     private const val SALE_TIMEOUT_MS = 120_000L
     private const val CANCEL_TIMEOUT_MS = 30_000L
+    private const val CARD_VERIFICATION_TIMEOUT_MS = 120_000L
+    private const val CARD_VERIFICATION_CONFIRM_TIMEOUT_MS = 120_000L
 
     /** Returns true if the provider string identifies the NNSmart / Newland terminal. */
     fun isNNSmartProvider(provider: String?): Boolean {
         if (provider.isNullOrBlank()) return false
         val p = provider.lowercase().trim()
         return p == "nnsmart" || p == "newland"
+    }
+
+    // ── Card Verification session state ─────────────────────────────
+    // The CV flow sends TWO responses to the same reply action:
+    //   1st: Par + TransactionId  (card verified, no money captured)
+    //   2nd: full trxResponse     (after confirm/cancel)
+    // A Channel-backed receiver stays alive across both responses.
+    private var cvAppContext: Context? = null
+    private var cvReceiver: BroadcastReceiver? = null
+    private var cvChannel: Channel<Intent>? = null
+
+    private fun cleanupCvSession() {
+        cvReceiver?.let { r ->
+            try {
+                cvAppContext?.unregisterReceiver(r)
+            } catch (_: Throwable) { /* already unregistered */ }
+        }
+        cvChannel?.close()
+        cvReceiver = null
+        cvChannel = null
+        cvAppContext = null
+    }
+
+    /**
+     * Perform a Card Verification on the NNSmart terminal.
+     *
+     * Reads the card and returns the PAR (Payment Account Reference) WITHOUT
+     * capturing payment. The broadcast receiver stays registered so the same
+     * reply action can receive the second response after confirm/cancel.
+     *
+     * The caller has 30 seconds to call [confirmCardVerification] or
+     * [cancelCardVerification] before the terminal auto-cancels.
+     */
+    suspend fun performCardVerification(
+        context: Context,
+        amountFormatted: String,
+        requesterRef: String,
+        currencyAlphaCode: String? = null,
+        showReceipts: Boolean = false
+    ): NNSmartCardVerificationResult = withContext(Dispatchers.IO) {
+        cleanupCvSession()
+
+        val nnsmartRequestId = UUID.randomUUID().toString()
+        logDebug(
+            "Starting NNSmart card verification: amount=$amountFormatted callerRef=$requesterRef " +
+                "nnsmartRequestId=$nnsmartRequestId currency=$currencyAlphaCode"
+        )
+
+        val amountMinor = parseAmountToMinorUnits(amountFormatted)
+        if (amountMinor == null) {
+            logError("Invalid amount format: $amountFormatted")
+            return@withContext NNSmartCardVerificationResult(
+                success = false,
+                message = "Invalid amount format: $amountFormatted"
+            )
+        }
+
+        val appContext = context.applicationContext
+        val replyAction = "app.sst.pinto.nnsmart.REPLY." + UUID.randomUUID().toString().replace("-", "")
+        val channel = Channel<Intent>(Channel.BUFFERED)
+
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                logDebug("NNSmart CV reply received on $replyAction")
+                channel.trySend(intent)
+            }
+        }
+
+        try {
+            val filter = IntentFilter(replyAction)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                appContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                appContext.registerReceiver(receiver, filter)
+            }
+        } catch (e: Throwable) {
+            logError("Failed to register NNSmart CV reply receiver", e)
+            channel.close()
+            return@withContext NNSmartCardVerificationResult(
+                success = false,
+                message = "Failed to register receiver: ${e.message}"
+            )
+        }
+
+        // Store session so confirm/cancel can reuse the same receiver + channel.
+        cvAppContext = appContext
+        cvReceiver = receiver
+        cvChannel = channel
+
+        try {
+            val requestIntent = Intent(ACTION_CARD_VERIFICATION).apply {
+                putExtra("intent_action_reply", replyAction)
+                putExtra("operation", "SALE")
+                putExtra("amount", amountMinor)
+                putExtra("request_id", nnsmartRequestId)
+                putExtra("show_receipts", showReceipts)
+                if (!currencyAlphaCode.isNullOrBlank()) {
+                    putExtra("currency_alpha_code", currencyAlphaCode)
+                }
+            }
+            logDebug("Sending NNSmart CV broadcast: action=$ACTION_CARD_VERIFICATION reply=$replyAction")
+            appContext.sendBroadcast(requestIntent)
+        } catch (e: Throwable) {
+            logError("Failed to send NNSmart CV broadcast", e)
+            cleanupCvSession()
+            return@withContext NNSmartCardVerificationResult(
+                success = false,
+                message = "Failed to send broadcast: ${e.message}"
+            )
+        }
+
+        // Wait for the FIRST response: Par + TransactionId.
+        val response = withTimeoutOrNull(CARD_VERIFICATION_TIMEOUT_MS) {
+            channel.receive()
+        }
+
+        if (response == null) {
+            logWarn("NNSmart card verification timed out waiting for PAR")
+            cleanupCvSession()
+            return@withContext NNSmartCardVerificationResult(
+                success = false,
+                message = "NNSmart card verification timed out"
+            )
+        }
+
+        val result = parseCardVerificationResponse(response)
+        if (!result.success) {
+            cleanupCvSession()
+        }
+        // If successful, receiver stays alive for confirm/cancel response.
+        result
+    }
+
+    /**
+     * Confirm a Card Verification, instructing the terminal to proceed with
+     * the payment capture.
+     *
+     * Must be called within 30 seconds of receiving the card verification
+     * result, otherwise the terminal auto-cancels.
+     *
+     * Sends a simple broadcast (no extras) to the confirm action, then waits
+     * for the SECOND response on the same reply action — the full transaction
+     * result. Do NOT bring the app to foreground before this completes.
+     */
+    suspend fun confirmCardVerification(
+        context: Context
+    ): NNSmartPaymentResult = withContext(Dispatchers.IO) {
+        val channel = cvChannel
+        if (channel == null) {
+            logError("confirmCardVerification called with no active CV session")
+            return@withContext NNSmartPaymentResult(
+                success = false,
+                resultCode = "NO_CV_SESSION",
+                message = "No active card verification session"
+            )
+        }
+
+        logDebug("Confirming NNSmart card verification")
+        try {
+            context.applicationContext.sendBroadcast(Intent(ACTION_CARD_VERIFICATION_CONFIRM))
+        } catch (e: Throwable) {
+            logError("Failed to send CV confirm broadcast", e)
+            cleanupCvSession()
+            return@withContext NNSmartPaymentResult(
+                success = false,
+                resultCode = "CV_CONFIRM_SEND_FAILED",
+                message = "Failed to send confirm: ${e.message}"
+            )
+        }
+
+        // Wait for the SECOND response: full transaction result.
+        val response = try {
+            withTimeoutOrNull(CARD_VERIFICATION_CONFIRM_TIMEOUT_MS) {
+                channel.receive()
+            }
+        } finally {
+            cleanupCvSession()
+        }
+
+        if (response == null) {
+            logWarn("NNSmart CV confirm timed out waiting for transaction result")
+            return@withContext NNSmartPaymentResult(
+                success = false,
+                resultCode = "CV_CONFIRM_TIMEOUT",
+                message = "NNSmart card verification confirm timed out"
+            )
+        }
+
+        parseTransactionResponse(response)
+    }
+
+    /**
+     * Cancel a Card Verification, instructing the terminal to abort the
+     * transaction without capturing payment.
+     */
+    suspend fun cancelCardVerification(
+        context: Context
+    ): Boolean = withContext(Dispatchers.IO) {
+        logDebug("Cancelling NNSmart card verification")
+        try {
+            context.applicationContext.sendBroadcast(Intent(ACTION_CARD_VERIFICATION_CANCEL))
+            logDebug("NNSmart card verification cancel broadcast sent")
+            true
+        } catch (e: Throwable) {
+            logError("Failed to send NNSmart card verification cancel", e)
+            false
+        } finally {
+            cleanupCvSession()
+        }
+    }
+
+    /**
+     * Parse the first card verification response.
+     *
+     * The demo app from NewNote checks for bundle keys `Par` and
+     * `TransactionId` (capital P / T) as direct extras. Some firmware
+     * versions may wrap them in a JSON envelope, so we check both.
+     */
+    private fun parseCardVerificationResponse(intent: Intent): NNSmartCardVerificationResult {
+        val extras = intent.extras
+
+        val extrasDump = buildString {
+            append("action=").append(intent.action)
+            append(" keys=[")
+            if (extras != null) {
+                val keys = extras.keySet().toList()
+                keys.forEachIndexed { i, k ->
+                    if (i > 0) append(", ")
+                    @Suppress("DEPRECATION")
+                    val v = extras.get(k)
+                    append(k).append('=')
+                    when (v) {
+                        null -> append("null")
+                        is String -> append('"').append(v).append('"')
+                        else -> append(v.toString())
+                    }
+                }
+            }
+            append(']')
+        }
+        logDebug("NNSmart card verification reply extras: $extrasDump")
+
+        // Direct bundle keys (matches demo app pattern)
+        val par = extras?.getString("Par")
+        val transactionId = extras?.getString("TransactionId")
+
+        if (par != null && transactionId != null) {
+            logDebug("NNSmart card verification success: par=$par transactionId=$transactionId")
+            return NNSmartCardVerificationResult(
+                success = true,
+                par = par,
+                transactionId = transactionId,
+                rawResponse = extrasDump
+            )
+        }
+
+        // Fallback: check for JSON envelope
+        if (extras != null) {
+            for (key in extras.keySet()) {
+                @Suppress("DEPRECATION")
+                val raw = extras.get(key)?.toString() ?: continue
+                val json = safeJson(raw) ?: continue
+                val jsonPar = json.optString("Par").takeIf { it.isNotBlank() }
+                    ?: json.optString("par").takeIf { it.isNotBlank() }
+                val jsonTxId = json.optString("TransactionId").takeIf { it.isNotBlank() }
+                    ?: json.optString("transactionId").takeIf { it.isNotBlank() }
+                if (jsonPar != null && jsonTxId != null) {
+                    logDebug("NNSmart card verification success (from JSON): par=$jsonPar transactionId=$jsonTxId")
+                    return NNSmartCardVerificationResult(
+                        success = true,
+                        par = jsonPar,
+                        transactionId = jsonTxId,
+                        rawResponse = extrasDump
+                    )
+                }
+                if (json.has("error")) {
+                    val errorJson = json.optJSONObject("error") ?: safeJson(json.optString("error"))
+                    val errDesc = errorJson?.optString("description")
+                        ?: errorJson?.optString("reason")
+                        ?: "Card verification failed"
+                    logWarn("NNSmart card verification error: $errDesc")
+                    return NNSmartCardVerificationResult(
+                        success = false,
+                        message = errDesc,
+                        rawResponse = extrasDump
+                    )
+                }
+            }
+        }
+
+        logWarn("NNSmart card verification: Par or TransactionId not found in response")
+        return NNSmartCardVerificationResult(
+            success = false,
+            message = "Card verification failed - no PAR received",
+            rawResponse = extrasDump
+        )
     }
 
     /**

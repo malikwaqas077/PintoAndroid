@@ -16,6 +16,7 @@ import app.sst.pinto.payment.PlanetPaymentManager
 import app.sst.pinto.payment.MockPaymentManager
 import app.sst.pinto.payment.NNSmartPaymentManager
 import app.sst.pinto.payment.NNSmartPaymentResult
+import app.sst.pinto.payment.NNSmartCardVerificationResult
 import app.sst.pinto.data.AppDatabase
 import app.sst.pinto.utils.getDeviceIpAddress
 import app.sst.pinto.utils.getDeviceSerialNumber
@@ -74,6 +75,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     // check (since PAR is only available after a sale). If the backend rejects
     // the limit we use this to run a Cancellation on the terminal.
     private var pendingNnsmartSale: NNSmartPaymentResult? = null
+
+    // For NNSmart Card Verification flow: holds the CV result (PAR + transactionId)
+    // while awaiting the backend limit check response.
+    private var pendingNnsmartCardVerification: NNSmartCardVerificationResult? = null
 
     private var isProcessingPayment: Boolean = false
     private var isHandlingPaymentLocally: Boolean = false // Flag to track if we're handling payment locally (YASPA disabled)
@@ -531,6 +536,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Clear any stale per-provider state from a previous attempt.
         pendingCardCheckResult = null
         pendingNnsmartSale = null
+        pendingNnsmartCardVerification = null
 
         // Step 1: Show PROCESSING screen automatically
         Log.d(TAG, "Showing PROCESSING screen for local payment")
@@ -561,7 +567,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 
                 val paymentProvider = deviceInfo.paymentProvider.lowercase()
                 val amountFormatted = String.format("%.2f", currentAmount.toDouble())
-                
+
                 // Get currency symbol for display
                 val currencyCode = deviceInfo.currency ?: "GBP"
                 val currencySymbol = when (currencyCode.uppercase()) {
@@ -571,17 +577,26 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     else -> currencyCode
                 }
 
-                // NNSmart (Newland) terminals do not expose a pre-check that
-                // returns a card token. Instead we run the SALE up-front to
-                // get the PAR / cardRefId, then send those to the backend for
-                // daily-limit validation. If the backend rejects, we reverse
-                // the sale via Cancellation.
                 if (NNSmartPaymentManager.isNNSmartProvider(paymentProvider)) {
-                    processNnsmartPayment(
-                        transactionId = transactionId,
-                        amountFormatted = amountFormatted,
-                        currencyCode = currencyCode
-                    )
+                    if (deviceInfo.nnsmartPostProcessingLimit) {
+                        // Post-processing: capture the sale first, validate the
+                        // limit afterwards, and reverse the sale if rejected.
+                        Log.d(TAG, "NNSmart: using POST-processing limit flow (sale-first)")
+                        processNnsmartPayment(
+                            transactionId = transactionId,
+                            amountFormatted = amountFormatted,
+                            currencyCode = currencyCode
+                        )
+                    } else {
+                        // Pre-processing: obtain PAR via Card Verification and
+                        // validate the limit before any money is captured.
+                        Log.d(TAG, "NNSmart: using PRE-processing limit flow (card verification)")
+                        processNnsmartCardVerificationPayment(
+                            transactionId = transactionId,
+                            amountFormatted = amountFormatted,
+                            currencyCode = currencyCode
+                        )
+                    }
                     return@launch
                 }
 
@@ -777,6 +792,215 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 delay(4000)
                 requestInitialScreen()
             }
+        }
+    }
+
+    /**
+     * NNSmart Card Verification payment flow.
+     *
+     * Uses the Card Verification feature to obtain the PAR before capturing
+     * payment. This avoids the need to reverse a sale if the limit is exceeded.
+     *
+     * Flow:
+     *   1. Send Card Verification request → terminal reads card, returns PAR.
+     *   2. Send PAR to backend for limit validation.
+     *   3. If approved → confirm card verification (terminal captures payment).
+     *   4. If rejected → cancel card verification (no money captured).
+     */
+    private suspend fun processNnsmartCardVerificationPayment(
+        transactionId: String,
+        amountFormatted: String,
+        currencyCode: String
+    ) {
+        try {
+            Log.d(TAG, "NNSmart CV: performing card verification amount=$amountFormatted ref=$transactionId")
+            val cvResult = NNSmartPaymentManager.performCardVerification(
+                context = getApplication(),
+                amountFormatted = amountFormatted,
+                requesterRef = transactionId,
+                currencyAlphaCode = currencyCode,
+                showReceipts = false
+            )
+
+            if (!cvResult.success) {
+                Log.w(TAG, "NNSmart CV: card verification failed: ${cvResult.message}")
+                _screenState.value = PaymentScreenState.TransactionFailed(
+                    errorMessage = cvResult.message ?: "Card verification failed"
+                )
+                isProcessingPayment = false
+                isHandlingPaymentLocally = false
+
+                val paymentResultJson = buildPaymentResultJson(
+                    success = false,
+                    transactionId = transactionId,
+                    resultCode = "CV_FAILED",
+                    message = cvResult.message
+                )
+                Log.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (cv-failed) to backend")
+                socketManager.sendMessage(paymentResultJson)
+
+                viewModelScope.launch {
+                    delay(4000)
+                    requestInitialScreen()
+                }
+                return
+            }
+
+            // Card verification succeeded — we have the PAR without capturing payment.
+            pendingNnsmartCardVerification = cvResult
+
+            val rawPar = cvResult.par?.trim().orEmpty()
+            val tokenForLimitCheck = if (rawPar.isNotEmpty()) {
+                rawPar
+            } else {
+                Log.w(TAG, "NNSmart CV: PAR missing on CV response, using dev mock PAR")
+                NNSMART_DEV_MOCK_PAR
+            }
+
+            Log.d(TAG, "NNSmart CV: card verified. par='$rawPar' cvTransactionId=${cvResult.transactionId} tokenUsed=$tokenForLimitCheck")
+
+            val cardCheckJson = """
+                {
+                    "messageType": "CARD_CHECK_RESULT",
+                    "screen": "PROCESSING",
+                    "data": {
+                        "cardToken": "$tokenForLimitCheck",
+                        "selectedAmount": $currentAmount
+                    },
+                    "transactionId": "$transactionId",
+                    "timestamp": ${System.currentTimeMillis()}
+                }
+            """.trimIndent()
+            Log.d(TAG, "NNSmart CV: sending CARD_CHECK_RESULT to backend for limit validation")
+            val sent = socketManager.sendMessage(cardCheckJson)
+            Log.d(TAG, "NNSmart CV: CARD_CHECK_RESULT send result: $sent")
+
+            // Stay on Processing until LIMIT_CHECK_RESULT arrives; the rest
+            // is handled in continuePaymentAfterLimitCheck → continueNnsmartCvPaymentAfterLimitCheck.
+        } catch (e: Exception) {
+            Log.e(TAG, "NNSmart CV: error during card verification", e)
+            _screenState.value = PaymentScreenState.TransactionFailed(
+                errorMessage = "Payment error: ${e.message}"
+            )
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+            viewModelScope.launch {
+                delay(4000)
+                requestInitialScreen()
+            }
+        }
+    }
+
+    /**
+     * NNSmart Card Verification post-limit-check flow.
+     *
+     * Unlike the legacy NNSmart flow, no money has been captured yet:
+     *   - approved  → confirm the card verification (terminal captures payment).
+     *   - rejected  → cancel the card verification (no reversal needed).
+     */
+    private fun continueNnsmartCvPaymentAfterLimitCheck(
+        approved: Boolean,
+        transactionId: String,
+        errorMessage: String,
+        cvResult: NNSmartCardVerificationResult
+    ) {
+        if (approved) {
+            Log.d(TAG, "NNSmart CV: limit approved, confirming card verification (cvTxId=${cvResult.transactionId})")
+
+            viewModelScope.launch {
+                try {
+                    val saleResult = NNSmartPaymentManager.confirmCardVerification(
+                        context = getApplication()
+                    )
+
+                    if (!saleResult.success) {
+                        Log.w(TAG, "NNSmart CV: confirm failed: code=${saleResult.resultCode} msg=${saleResult.message}")
+                        _screenState.value = PaymentScreenState.TransactionFailed(
+                            errorMessage = saleResult.message ?: "Payment capture failed"
+                        )
+
+                        val paymentResultJson = buildPaymentResultJson(
+                            success = false,
+                            transactionId = transactionId,
+                            resultCode = saleResult.resultCode,
+                            message = saleResult.message
+                        )
+                        Log.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (confirm-failed) to backend")
+                        socketManager.sendMessage(paymentResultJson)
+
+                        pendingNnsmartCardVerification = null
+                        isProcessingPayment = false
+                        isHandlingPaymentLocally = false
+                        delay(4000)
+                        requestInitialScreen()
+                        return@launch
+                    }
+
+                    // Payment captured successfully.
+                    lastSuccessfulSale = SuccessfulSaleTransaction(
+                        transactionId = transactionId,
+                        amount = currentAmount,
+                        requesterTransRefNum = saleResult.originalTrxUniqueId ?: transactionId
+                    )
+                    saleResult.originalTrxUniqueId?.let { trxId ->
+                        savePendingTicketPrintTransaction(
+                            transactionId = transactionId,
+                            amount = currentAmount,
+                            originalRequesterRef = trxId,
+                            provider = "nnsmart"
+                        )
+                    }
+
+                    val paymentResultJson = buildPaymentResultJson(
+                        success = true,
+                        transactionId = transactionId,
+                        resultCode = saleResult.resultCode ?: "A",
+                        message = saleResult.message ?: "APPROVED",
+                        bankResultCode = "00"
+                    )
+                    Log.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (success) to backend")
+                    socketManager.sendMessage(paymentResultJson)
+
+                    _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = true)
+                    pendingNnsmartCardVerification = null
+                    isProcessingPayment = false
+                    isHandlingPaymentLocally = false
+                } catch (e: Exception) {
+                    Log.e(TAG, "NNSmart CV: error confirming card verification", e)
+                    _screenState.value = PaymentScreenState.TransactionFailed(
+                        errorMessage = "Payment error: ${e.message}"
+                    )
+                    pendingNnsmartCardVerification = null
+                    isProcessingPayment = false
+                    isHandlingPaymentLocally = false
+                    delay(4000)
+                    requestInitialScreen()
+                }
+            }
+            return
+        }
+
+        // Rejected by backend limit check — simply cancel, no reversal needed.
+        Log.d(TAG, "NNSmart CV: limit rejected, cancelling card verification")
+        _screenState.value = PaymentScreenState.LimitError(
+            errorMessage = errorMessage
+        )
+        allowNavigationFromLimitError = false
+
+        viewModelScope.launch {
+            try {
+                NNSmartPaymentManager.cancelCardVerification(context = getApplication())
+                Log.d(TAG, "NNSmart CV: card verification cancelled successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "NNSmart CV: error cancelling card verification", e)
+            }
+
+            pendingNnsmartCardVerification = null
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+
+            delay(4000)
+            requestInitialScreen()
         }
     }
 
@@ -1274,6 +1498,19 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * This is called when LIMIT_CHECK_RESULT message is received from server.
      */
     private fun continuePaymentAfterLimitCheck(approved: Boolean, transactionId: String, errorMessage: String = "Daily spending limit exceeded") {
+        // NNSmart Card Verification flow: no money captured yet, just
+        // confirm or cancel the pending card verification.
+        val nnsmartCv = pendingNnsmartCardVerification
+        if (nnsmartCv != null) {
+            continueNnsmartCvPaymentAfterLimitCheck(
+                approved = approved,
+                transactionId = transactionId,
+                errorMessage = errorMessage,
+                cvResult = nnsmartCv
+            )
+            return
+        }
+
         // If a pending NNSmart sale is tracked, the sale has already been
         // taken on the terminal — handle this branch separately because
         // "rejected" here means we must REVERSE an already-successful sale.
@@ -2059,7 +2296,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         
         // Check if this is device configuration from server
         // Device configuration includes: minTransactionLimit, maxTransactionLimit, etc.
-        val hasConfig = data.minTransactionLimit != null || 
+        val hasConfig = data.minTransactionLimit != null ||
                        data.maxTransactionLimit != null ||
                        data.transactionFeeType != null ||
                        data.yaspaEnabled != null ||
@@ -2085,7 +2322,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         transactionFeeValue = data.transactionFeeValue ?: existingInfo?.transactionFeeValue ?: 0.50,
                         yaspaEnabled = data.yaspaEnabled ?: existingInfo?.yaspaEnabled ?: true,
                         paymentProvider = data.paymentProvider ?: existingInfo?.paymentProvider ?: "nnsmart",
-                        requireCardReceipt = data.requireCardReceipt ?: existingInfo?.requireCardReceipt ?: true
+                        requireCardReceipt = data.requireCardReceipt ?: existingInfo?.requireCardReceipt ?: true,
+                        // Locally-controlled toggle (Settings screen); the server
+                        // does not send it, so always preserve the existing value.
+                        nnsmartPostProcessingLimit = existingInfo?.nnsmartPostProcessingLimit ?: false
                     )
                     
                     // Use insertDeviceInfo which handles both insert and update (REPLACE strategy)

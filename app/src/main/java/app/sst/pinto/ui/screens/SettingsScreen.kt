@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -25,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -178,6 +180,30 @@ fun SettingsScreen(
                                 label = "Require Card Receipt",
                                 value = if (info.requireCardReceipt) "Enabled" else "Disabled"
                             )
+
+                            // Newland/NNSmart only: choose when the daily limit
+                            // is validated relative to capturing payment.
+                            if (info.paymentProvider.uppercase() in listOf("NNSMART", "NEWLAND")) {
+                                SettingToggleRow(
+                                    label = "Limit Check Timing",
+                                    description = if (info.nnsmartPostProcessingLimit) {
+                                        "Post-processing: take payment first, check limit after, reverse if exceeded"
+                                    } else {
+                                        "Pre-processing: check limit before payment (card verification)"
+                                    },
+                                    checked = info.nnsmartPostProcessingLimit,
+                                    onCheckedChange = { enabled ->
+                                        coroutineScope.launch {
+                                            database.deviceInfoDao()
+                                                .updateNnsmartPostProcessingLimit(enabled)
+                                            logger.i(
+                                                "SettingsScreen",
+                                                "Newland limit timing set to ${if (enabled) "POST" else "PRE"}-processing"
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         } ?: run {
                             Text(
                                 text = "No device configuration found. Connect to server to receive configuration.",
@@ -345,6 +371,39 @@ private fun DeviceInfoRow(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+
+@Composable
+private fun SettingToggleRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
         )
     }
 }

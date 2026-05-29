@@ -13,7 +13,12 @@ data class DeviceInfo(
     val transactionFeeValue: Double,
     val yaspaEnabled: Boolean,
     val paymentProvider: String,
-    val requireCardReceipt: Boolean = true // Default to true for backward compatibility
+    val requireCardReceipt: Boolean = true, // Default to true for backward compatibility
+    // Newland/NNSmart only: when true, the SALE is taken first and the daily
+    // limit is validated AFTER payment (post-processing), reversing the sale if
+    // rejected. When false (default) the PAR is obtained via Card Verification
+    // and the limit is checked BEFORE any money is captured (pre-processing).
+    val nnsmartPostProcessingLimit: Boolean = false
 )
 
 
