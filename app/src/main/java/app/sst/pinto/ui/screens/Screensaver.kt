@@ -2,7 +2,7 @@ package app.sst.pinto.ui.components
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 import android.view.LayoutInflater
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
@@ -47,16 +47,16 @@ fun Screensaver(
     videoResId: Int, // Resource ID for the video file
     onTap: () -> Unit
 ) {
-    Log.d(TAG, "Screensaver component called with isVisible=$isVisible")
+    AppLog.d(TAG, "Screensaver component called with isVisible=$isVisible")
 
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
 
     // Handle visibility changes
     LaunchedEffect(isVisible) {
-        Log.d(TAG, "Screensaver visibility changed to $isVisible")
+        AppLog.d(TAG, "Screensaver visibility changed to $isVisible")
         if (isVisible) {
-            Log.d(TAG, "Initializing ExoPlayer")
+            AppLog.d(TAG, "Initializing ExoPlayer")
             // Release any existing player first
             player?.release()
 
@@ -79,11 +79,11 @@ fun Screensaver(
                     )
                     Uri.fromFile(File(cachedPath)).toString()
                 } else {
-                    Log.d(TAG, "Using default screensaver video from resources")
+                    AppLog.d(TAG, "Using default screensaver video from resources")
                     "android.resource://${context.packageName}/$videoResId"
                 }
 
-                Log.d(TAG, "Setting media item: $videoUriString")
+                AppLog.d(TAG, "Setting media item: $videoUriString")
                 setMediaItem(MediaItem.fromUri(Uri.parse(videoUriString)))
 
                 // Configure player
@@ -93,27 +93,27 @@ fun Screensaver(
                 // Add listener to handle playback state changes
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
-                        Log.d(TAG, "Playback state changed: $playbackState")
+                        AppLog.d(TAG, "Playback state changed: $playbackState")
                         when (playbackState) {
                             Player.STATE_ENDED -> {
-                                Log.d(TAG, "Video ended, seeking to start")
+                                AppLog.d(TAG, "Video ended, seeking to start")
                                 seekTo(0)
                                 play()
                             }
                             Player.STATE_READY -> {
-                                Log.d(TAG, "Video ready to play")
+                                AppLog.d(TAG, "Video ready to play")
                             }
                             Player.STATE_BUFFERING -> {
-                                Log.d(TAG, "Video buffering")
+                                AppLog.d(TAG, "Video buffering")
                             }
                             Player.STATE_IDLE -> {
-                                Log.d(TAG, "Video idle")
+                                AppLog.d(TAG, "Video idle")
                             }
                         }
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
-                        Log.e(TAG, "Player error: ${error.message}")
+                        AppLog.e(TAG, "Player error: ${error.message}")
                         // Try to recover by recreating the media item
                         setMediaItem(MediaItem.fromUri(Uri.parse(videoUriString)))
                         prepare()
@@ -124,11 +124,11 @@ fun Screensaver(
                 // Don't call prepare() here — wait until the PlayerView
                 // surface is attached (in the AndroidView update block)
                 // to avoid a surface swap that corrupts the decoder.
-                Log.d(TAG, "ExoPlayer created, waiting for surface before prepare")
+                AppLog.d(TAG, "ExoPlayer created, waiting for surface before prepare")
             }
         } else {
             // Release player when screensaver is hidden
-            Log.d(TAG, "Releasing ExoPlayer")
+            AppLog.d(TAG, "Releasing ExoPlayer")
             player?.release()
             player = null
         }
@@ -137,7 +137,7 @@ fun Screensaver(
     // Ensure player is released when component is disposed
     DisposableEffect(Unit) {
         onDispose {
-            Log.d(TAG, "Screensaver component disposed, releasing player")
+            AppLog.d(TAG, "Screensaver component disposed, releasing player")
             player?.release()
             player = null
         }
@@ -148,13 +148,13 @@ fun Screensaver(
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        Log.d(TAG, "Rendering screensaver video player")
+        AppLog.d(TAG, "Rendering screensaver video player")
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
                 .clickable {
-                    Log.d(TAG, "Screensaver tapped, invoking onTap")
+                    AppLog.d(TAG, "Screensaver tapped, invoking onTap")
                     onTap()
                 },
             contentAlignment = Alignment.Center
@@ -168,7 +168,7 @@ fun Screensaver(
                 key(exoPlayer) {
                     AndroidView(
                         factory = { ctx ->
-                            Log.d(TAG, "Inflating texture PlayerView for Compose")
+                            AppLog.d(TAG, "Inflating texture PlayerView for Compose")
                             val inflater = LayoutInflater.from(ctx)
                             (inflater.inflate(
                                 R.layout.screensaver_player_view,
@@ -185,7 +185,7 @@ fun Screensaver(
                                 playerView.player = exoPlayer
                                 // Prepare now that the surface is attached
                                 if (exoPlayer.playbackState == Player.STATE_IDLE) {
-                                    Log.d(TAG, "Surface attached, preparing ExoPlayer")
+                                    AppLog.d(TAG, "Surface attached, preparing ExoPlayer")
                                     exoPlayer.prepare()
                                 }
                             }
@@ -195,7 +195,7 @@ fun Screensaver(
                 }
             } ?: run {
                 // Fallback for when player isn't initialized yet
-                Log.d(TAG, "Showing fallback text (player not ready)")
+                AppLog.d(TAG, "Showing fallback text (player not ready)")
                 Text(
                     text = "Loading screensaver...",
                     color = Color.White,

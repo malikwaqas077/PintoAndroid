@@ -2,7 +2,7 @@ package app.sst.pinto
 
 import android.os.Bundle
 import android.os.Build
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen().setKeepOnScreenCondition { !isReady }
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate called")
+        AppLog.d(TAG, "onCreate called")
 
         // Initialize managers first
         timeoutManager = TimeoutManager.getInstance()
@@ -94,17 +94,12 @@ class MainActivity : ComponentActivity() {
         NNSmartPaymentManager.configureLogging(fileLogger)
         app.sst.pinto.payment.PlanetPaymentManager.configureLogging(fileLogger)
 
-        // Persist uncaught crashes before process exits.
-        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            fileLogger.e(
-                TAG,
-                "Uncaught exception on thread=${thread.name}: ${throwable.message}",
-                throwable
-            )
-            previousHandler?.uncaughtException(thread, throwable)
-        }
-        
+        // Ask portal deviceHub: lets the portal pull this terminal's log files on demand.
+        app.sst.pinto.network.PortalWebSocketRepository.getInstance(applicationContext).start()
+
+        // Uncaught crashes are persisted by PintoApplication, which installs the
+        // handler once per process (not on every activity re-creation).
+
         // Initialize the Planet/Integra SDK ONLY when the configured payment
         // provider is Integra. Loading the Integra native .so on a non-Planet
         // terminal (e.g. Newland U2000 running NNSmart) has been observed to
@@ -119,38 +114,38 @@ class MainActivity : ComponentActivity() {
                     ?.paymentProvider
                     ?.lowercase()
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to read payment provider from DB, defaulting to nnsmart", e)
+                AppLog.w(TAG, "Failed to read payment provider from DB, defaulting to nnsmart", e)
                 null
             } ?: "nnsmart"
 
             if (provider == "integra" && !isLikelyNewlandDevice()) {
-                Log.d(TAG, "Payment provider = integra, initializing Planet SDK")
+                AppLog.d(TAG, "Payment provider = integra, initializing Planet SDK")
                 app.sst.pinto.payment.PlanetPaymentManager.initializeLoggerAsync { isAvailable ->
                     if (isAvailable) {
-                        Log.d(TAG, "Planet SDK is available on this device")
+                        AppLog.d(TAG, "Planet SDK is available on this device")
                         Thread {
                             try {
                                 val success = app.sst.pinto.payment.PlanetPaymentManager.initializeIntegra()
                                 if (success) {
-                                    Log.d(TAG, "Planet Integra initialized successfully at app start")
+                                    AppLog.d(TAG, "Planet Integra initialized successfully at app start")
                                 } else {
-                                    Log.w(TAG, "Planet Integra initialization deferred (will initialize on first transaction)")
+                                    AppLog.w(TAG, "Planet Integra initialization deferred (will initialize on first transaction)")
                                 }
                             } catch (e: Exception) {
-                                Log.e(TAG, "Error initializing Planet Integra at app start", e)
+                                AppLog.e(TAG, "Error initializing Planet Integra at app start", e)
                             }
                         }.start()
                     } else {
-                        Log.w(TAG, "Planet SDK is not available on this device - payment features will be disabled")
+                        AppLog.w(TAG, "Planet SDK is not available on this device - payment features will be disabled")
                     }
                 }
             } else if (provider == "integra") {
-                Log.w(
+                AppLog.w(
                     TAG,
                     "Payment provider is integra but device looks like Newland/U2000; skipping Planet SDK preload to avoid native crash"
                 )
             } else {
-                Log.d(TAG, "Payment provider = $provider, skipping Planet SDK initialization")
+                AppLog.d(TAG, "Payment provider = $provider, skipping Planet SDK initialization")
             }
         }
 
@@ -158,7 +153,7 @@ class MainActivity : ComponentActivity() {
         setupFullscreen()
 
         setContent {
-            Log.d(TAG, "Setting content")
+            AppLog.d(TAG, "Setting content")
             PintoTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -184,7 +179,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "onResume called")
+        AppLog.d(TAG, "onResume called")
         timeoutManager.recordUserInteraction()
         ImmersiveModeHelper.onResume(this)
     }
@@ -210,14 +205,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         ImmersiveModeHelper.cleanup(this)
+        try {
+            app.sst.pinto.network.PortalWebSocketRepository.getInstance(applicationContext).stop()
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Error stopping portal hub", e)
+        }
         super.onDestroy()
-        Log.d(TAG, "onDestroy called")
+        AppLog.d(TAG, "onDestroy called")
         // Clean up Planet SDK resources
         try {
             app.sst.pinto.payment.PlanetPaymentManager.cleanup()
-            Log.d(TAG, "Planet SDK resources cleaned up")
+            AppLog.d(TAG, "Planet SDK resources cleaned up")
         } catch (e: Exception) {
-            Log.e(TAG, "Error cleaning up Planet SDK resources", e)
+            AppLog.e(TAG, "Error cleaning up Planet SDK resources", e)
         }
     }
 }
@@ -277,15 +277,21 @@ fun MainScreen(configManager: ConfigManager, screensaverVideoResId: Int) {
             }
             showServerConfig -> {
                 // Show server configuration screen
+                val context = LocalContext.current
                 ServerConfigScreen(
                     currentIp = configManager.getServerIp(),
                     currentPort = configManager.getServerPort(),
+                    currentPortalUrl = configManager.getPortalUrl(),
                     isFirstTime = configManager.isFirstLaunch(),
-                    onSave = { ip, port ->
+                    onSave = { ip, port, portalUrl ->
                         val success = configManager.saveServerConfig(ip, port)
                         if (success) {
+                            configManager.savePortalUrl(portalUrl)
                             serverUrl = configManager.getServerUrl()
                             showServerConfig = false
+                            app.sst.pinto.network.PortalWebSocketRepository
+                                .getInstance(context.applicationContext)
+                                .reconnect()
                         }
                     },
                     onCancel = if (!configManager.isFirstLaunch()) {

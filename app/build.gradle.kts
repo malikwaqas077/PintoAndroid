@@ -60,6 +60,11 @@ android {
         jvmTarget = "1.8"
     }
 
+    testOptions {
+        // FileLogger unit tests touch android.util.Log; return defaults instead of throwing.
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         compose = true
     }

@@ -1,6 +1,6 @@
 package app.sst.pinto.network
 
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 import app.sst.pinto.utils.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +27,7 @@ class SocketManager private constructor() {
         if (fileLogger != null) {
             fileLogger?.d(TAG, message)
         } else {
-            Log.d(TAG, message)
+            AppLog.d(TAG, message)
         }
     }
 
@@ -35,7 +35,7 @@ class SocketManager private constructor() {
         if (fileLogger != null) {
             fileLogger?.e(TAG, message, t)
         } else {
-            Log.e(TAG, message, t)
+            AppLog.e(TAG, message, t)
         }
     }
 

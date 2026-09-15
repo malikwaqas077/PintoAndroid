@@ -5,7 +5,6 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.os.Build
-import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -171,7 +170,7 @@ object ImmersiveModeHelper {
             applyGestureExclusion(decor)
             (decor as? ViewGroup)?.let { bringDecorEdgeBlockersToFront(it) }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to hide system bars: ${e.message}", e)
+            AppLog.e(TAG, "Failed to hide system bars: ${e.message}", e)
         }
     }
 
@@ -244,7 +243,7 @@ object ImmersiveModeHelper {
             val wm = activity.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             wm.addView(view, params)
         } catch (e: Exception) {
-            Log.w(TAG, "Overlay touch interceptor failed ($gravity), using decor fallback: ${e.message}")
+            AppLog.w(TAG, "Overlay touch interceptor failed ($gravity), using decor fallback: ${e.message}")
         }
     }
 

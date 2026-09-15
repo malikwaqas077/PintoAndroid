@@ -14,7 +14,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 import kotlinx.coroutines.launch
 
 @Composable
@@ -31,7 +31,7 @@ fun PressAndHoldDetector(
 
     // Reset function
     fun resetState() {
-        Log.d(TAG, "Resetting press and hold state")
+        AppLog.d(TAG, "Resetting press and hold state")
         isPressed = false
         holdProgress = 0f
         progressJob?.cancel()
@@ -45,7 +45,7 @@ fun PressAndHoldDetector(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
-                        Log.d(TAG, "Press detected, starting hold timer")
+                        AppLog.d(TAG, "Press detected, starting hold timer")
                         isPressed = true
                         holdProgress = 0f
 
@@ -55,34 +55,34 @@ fun PressAndHoldDetector(
                                 val stepDuration = 50L
                                 val totalSteps = (holdDurationMs / stepDuration).toInt()
 
-                                Log.d(TAG, "Starting progress animation: $totalSteps steps")
+                                AppLog.d(TAG, "Starting progress animation: $totalSteps steps")
 
                                 for (step in 1..totalSteps) {
                                     if (!isPressed) {
-                                        Log.d(TAG, "Press released early at step $step")
+                                        AppLog.d(TAG, "Press released early at step $step")
                                         break
                                     }
 
                                     delay(stepDuration)
                                     holdProgress = step.toFloat() / totalSteps
 
-                                    Log.d(TAG, "Progress: ${(holdProgress * 100).toInt()}%")
+                                    AppLog.d(TAG, "Progress: ${(holdProgress * 100).toInt()}%")
 
                                     if (step >= totalSteps) {
-                                        Log.d(TAG, "Hold complete! Triggering callback")
+                                        AppLog.d(TAG, "Hold complete! Triggering callback")
                                         onHoldComplete()
                                         resetState()
                                         return@launch
                                     }
                                 }
                             } catch (e: Exception) {
-                                Log.e(TAG, "Error in progress animation", e)
+                                AppLog.e(TAG, "Error in progress animation", e)
                             }
                         }
 
                         // Wait for pointer release
                         val released = tryAwaitRelease()
-                        Log.d(TAG, "Pointer released: $released")
+                        AppLog.d(TAG, "Pointer released: $released")
 
                         // Reset state when released early
                         if (isPressed) {

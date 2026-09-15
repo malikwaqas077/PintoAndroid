@@ -3,7 +3,7 @@ package app.sst.pinto.viewmodels
 import android.app.Application
 import android.content.Intent
 import android.content.SharedPreferences
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.sst.pinto.data.models.MessageData
@@ -124,20 +124,20 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     }
 
     init {
-        Log.d(TAG, "Initializing PaymentViewModel")
+        AppLog.d(TAG, "Initializing PaymentViewModel")
 
         // Setup timeout manager with callback for timeout events
         timeoutManager.setup {
-            Log.d(TAG, "Timeout occurred, handling in ViewModel")
+            AppLog.d(TAG, "Timeout occurred, handling in ViewModel")
             handleTimeout()
         }
 
         // Monitor timeout state to show screensaver directly
         viewModelScope.launch {
             timeoutManager.timeoutOccurred.collect { occurred ->
-                Log.d(TAG, "Timeout state changed: $occurred")
+                AppLog.d(TAG, "Timeout state changed: $occurred")
                 if (occurred && _isOnAmountScreen.value) {
-                    Log.d(TAG, "Timeout occurred while on amount screen, showing screensaver")
+                    AppLog.d(TAG, "Timeout occurred while on amount screen, showing screensaver")
                     // Pause timers when showing screensaver
                     timeoutManager.pauseTimersForScreensaver()
 
@@ -150,7 +150,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Monitor screensaver visibility
         viewModelScope.launch {
             _isScreensaverVisible.collect { visible ->
-                Log.d(TAG, "Screensaver visibility changed: $visible")
+                AppLog.d(TAG, "Screensaver visibility changed: $visible")
                 if (visible) {
                     // Make sure timers are paused when screensaver is visible
                     timeoutManager.pauseTimersForScreensaver()
@@ -161,7 +161,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Monitor socket messages
         viewModelScope.launch {
             socketManager.messageReceived.collect { message ->
-                Log.d(TAG, "Received socket message: $message")
+                AppLog.d(TAG, "Received socket message: $message")
                 processSocketMessage(message)
             }
         }
@@ -169,10 +169,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Monitor socket connection state
         viewModelScope.launch {
             socketManager.connectionState.collect { state ->
-                Log.d(TAG, "Socket connection state changed: $state")
+                AppLog.d(TAG, "Socket connection state changed: $state")
                 when (state) {
                     SocketManager.ConnectionState.DISCONNECTED -> {
-                        Log.d(TAG, "Socket disconnected, updating screen state")
+                        AppLog.d(TAG, "Socket disconnected, updating screen state")
                         audit("Socket DISCONNECTED while state=${_screenState.value::class.simpleName}")
                         // Immediately set to ConnectionError, don't go through Loading
                         _screenState.value = PaymentScreenState.ConnectionError
@@ -181,7 +181,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     SocketManager.ConnectionState.CONNECTING -> {
                         // Only set Loading if we're not already in ConnectionError state
                         if (_screenState.value !is PaymentScreenState.ConnectionError) {
-                            Log.d(TAG, "Socket connecting, updating screen state")
+                            AppLog.d(TAG, "Socket connecting, updating screen state")
                             _screenState.value = PaymentScreenState.Loading
                         }
                     }
@@ -205,7 +205,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun connectToBackend(url: String) {
-        Log.d(TAG, "Connecting to backend: $url")
+        AppLog.d(TAG, "Connecting to backend: $url")
         // Store the URL for later use
         this.serverUrl = url
         socketManager.connect(url)
@@ -214,7 +214,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             delay(5000) // Wait 5 seconds
             if (_screenState.value is PaymentScreenState.Loading) {
-                Log.d(TAG, "Still in loading state after 5 seconds, requesting initial screen")
+                AppLog.d(TAG, "Still in loading state after 5 seconds, requesting initial screen")
                 requestInitialScreen()
             }
         }
@@ -228,12 +228,12 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         // If the screensaver is visible, hide it and restore the previous state
         if (_isScreensaverVisible.value) {
-            Log.d(TAG, "User interacted while screensaver was visible, hiding screensaver")
+            AppLog.d(TAG, "User interacted while screensaver was visible, hiding screensaver")
             _isScreensaverVisible.value = false
 
             // If we have a saved state, restore it
             lastActiveState?.let {
-                Log.d(TAG, "Restoring last active state: ${it::class.simpleName}")
+                AppLog.d(TAG, "Restoring last active state: ${it::class.simpleName}")
                 _screenState.value = it
             }
         }
@@ -243,20 +243,20 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * Handles a timeout event by canceling any active transaction.
      */
     private fun handleTimeout() {
-        Log.d(TAG, "Handling timeout event")
+        AppLog.d(TAG, "Handling timeout event")
         // Only trigger screensaver if on the amount selection screen
         if (_isOnAmountScreen.value) {
             // Save current state before changing to screensaver
             if (_screenState.value !is PaymentScreenState.DeviceError &&
                 _screenState.value !is PaymentScreenState.ConnectionError) {
                 lastActiveState = _screenState.value
-                Log.d(TAG, "Saved last active state: ${lastActiveState?.javaClass?.simpleName}")
+                AppLog.d(TAG, "Saved last active state: ${lastActiveState?.javaClass?.simpleName}")
             }
 
             // Cancel any active transaction
             cancelPayment(isTimeout = true)
         } else {
-            Log.d(TAG, "Not on amount screen, ignoring timeout")
+            AppLog.d(TAG, "Not on amount screen, ignoring timeout")
             // Reset the timeout timer
             timeoutManager.recordUserInteraction()
         }
@@ -272,7 +272,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
             
             if (deviceInfo == null) {
-                Log.w(TAG, "Device configuration not found, using original amount without fee")
+                AppLog.w(TAG, "Device configuration not found, using original amount without fee")
                 return originalAmount
             }
             
@@ -282,7 +282,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             
             // Only add fee if feeValue is greater than 0
             if (feeValue <= 0) {
-                Log.d(TAG, "Fee value is 0 or negative, using original amount: $originalAmount")
+                AppLog.d(TAG, "Fee value is 0 or negative, using original amount: $originalAmount")
                 return originalAmount
             }
             
@@ -294,29 +294,29 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     originalAmountDouble + (originalAmountDouble * feeValue / 100.0)
                 }
                 else -> {
-                    Log.w(TAG, "Unknown fee type: $feeType, using original amount")
+                    AppLog.w(TAG, "Unknown fee type: $feeType, using original amount")
                     originalAmountDouble
                 }
             }
             
             val roundedAmount = finalAmount.toInt()
-            Log.d(TAG, "Fee calculation: original=$originalAmount, feeType=$feeType, feeValue=$feeValue, final=$roundedAmount")
+            AppLog.d(TAG, "Fee calculation: original=$originalAmount, feeType=$feeType, feeValue=$feeValue, final=$roundedAmount")
             roundedAmount
         } catch (e: Exception) {
-            Log.e(TAG, "Error calculating fee, using original amount", e)
+            AppLog.e(TAG, "Error calculating fee, using original amount", e)
             originalAmount
         }
     }
     
     fun selectAmount(amount: Int) {
-        Log.d(TAG, "Amount selected: $amount")
+        AppLog.d(TAG, "Amount selected: $amount")
         recordUserInteraction()
 
         // Special code -2 is used to return to amount selection from limit error
         if (amount == -2) {
             val transactionId = UUID.randomUUID().toString()
             currentTransactionId = transactionId
-            Log.d(TAG, "Reset requested (code -2), new transaction ID: $transactionId")
+            AppLog.d(TAG, "Reset requested (code -2), new transaction ID: $transactionId")
             
             // Allow navigation away from LIMIT_ERROR screen after user-initiated reset
             allowNavigationFromLimitError = true
@@ -335,7 +335,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         // Special code -1 indicates "Other" - show keypad screen for custom amount entry
         if (amount == -1) {
-            Log.d(TAG, "Other option selected - showing keypad screen")
+            AppLog.d(TAG, "Other option selected - showing keypad screen")
             viewModelScope.launch {
                 val database = AppDatabase.getDatabase(getApplication())
                 val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
@@ -363,7 +363,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         val transactionId = currentTransactionId ?: UUID.randomUUID().toString().also {
             currentTransactionId = it
-            Log.d(TAG, "Generated new transaction ID: $it")
+            AppLog.d(TAG, "Generated new transaction ID: $it")
         }
 
         // Validate amount against min/max transaction limits locally
@@ -385,7 +385,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             
             if (amount < minAmount) {
-                Log.w(TAG, "Amount $amount is below minimum limit $minAmount")
+                AppLog.w(TAG, "Amount $amount is below minimum limit $minAmount")
                 _screenState.value = PaymentScreenState.LimitError(
                     errorMessage = "Minimum transaction limit is $currencySymbol$minAmount"
                 )
@@ -394,7 +394,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             
             if (amount > maxAmount) {
-                Log.w(TAG, "Amount $amount exceeds maximum limit $maxAmount")
+                AppLog.w(TAG, "Amount $amount exceeds maximum limit $maxAmount")
                 _screenState.value = PaymentScreenState.LimitError(
                     errorMessage = "Maximum transaction limit is $currencySymbol$maxAmount"
                 )
@@ -405,7 +405,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             // For Mock payment provider, check if amount is 101 (daily limit trigger)
             val paymentProvider = deviceInfo?.paymentProvider?.lowercase() ?: "nnsmart"
             if (paymentProvider == "mock" && amount == 101) {
-                Log.d(TAG, "Mock payment: Amount 101 triggers daily limit exceeded")
+                AppLog.d(TAG, "Mock payment: Amount 101 triggers daily limit exceeded")
                 _screenState.value = PaymentScreenState.LimitError(
                     errorMessage = "Daily spending limit exceeded"
                 )
@@ -418,7 +418,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             
             // Store the original amount for display, but use final amount for payment
             if (amount > 0) {
-                Log.d(TAG, "Storing original amount: $amount, final amount with fee: $finalAmount")
+                AppLog.d(TAG, "Storing original amount: $amount, final amount with fee: $finalAmount")
                 currentAmount = finalAmount // Store final amount for payment processing (includes fee)
             }
 
@@ -427,7 +427,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             
             if (!yaspaEnabled) {
                 // YASPA disabled: Show timeout screen locally, then proceed directly to payment
-                Log.d(TAG, "YASPA disabled - showing timeout screen then proceeding directly to payment")
+                AppLog.d(TAG, "YASPA disabled - showing timeout screen then proceeding directly to payment")
                 
                 // Set flag to indicate we're handling payment locally
                 isHandlingPaymentLocally = true
@@ -460,7 +460,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 delay(3000) // Show timeout screen for 3 seconds
                 
                 // Proceed directly to payment (as if DEBIT_CARD was selected)
-                Log.d(TAG, "YASPA disabled - proceeding directly to payment after timeout screen")
+                AppLog.d(TAG, "YASPA disabled - proceeding directly to payment after timeout screen")
                 processLocalPayment("DEBIT_CARD", transactionId)
             } else {
                 // YASPA enabled: Normal flow - send message and wait for server response (PAYMENT_METHOD screen)
@@ -487,18 +487,18 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun selectPaymentMethod(method: String) {
-        Log.d(TAG, "Payment method selected: $method")
+        AppLog.d(TAG, "Payment method selected: $method")
         recordUserInteraction()
 
         val transactionId = currentTransactionId
         if (transactionId == null) {
-            Log.e(TAG, "Cannot select payment method: No active transaction ID")
+            AppLog.e(TAG, "Cannot select payment method: No active transaction ID")
             return
         }
 
         // For DEBIT_CARD and PAY_BY_BANK, handle payment locally
         if (method == "DEBIT_CARD" || method == "PAY_BY_BANK") {
-            Log.d(TAG, "Processing local payment for method: $method")
+            AppLog.d(TAG, "Processing local payment for method: $method")
             processLocalPayment(method, transactionId)
         } else {
             // For other payment methods (e.g., QR_CODE), send to server
@@ -526,7 +526,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      */
     private fun processLocalPayment(method: String, transactionId: String) {
         if (isProcessingPayment) {
-            Log.w(TAG, "Payment already in progress, ignoring duplicate request")
+            AppLog.w(TAG, "Payment already in progress, ignoring duplicate request")
             return
         }
         
@@ -539,7 +539,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         pendingNnsmartCardVerification = null
 
         // Step 1: Show PROCESSING screen automatically
-        Log.d(TAG, "Showing PROCESSING screen for local payment")
+        AppLog.d(TAG, "Showing PROCESSING screen for local payment")
         _screenState.value = PaymentScreenState.Processing
         _isOnAmountScreen.value = false
         
@@ -550,7 +550,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
                 
                 if (deviceInfo == null) {
-                    Log.e(TAG, "Device configuration not found, cannot process payment")
+                    AppLog.e(TAG, "Device configuration not found, cannot process payment")
                     _screenState.value = PaymentScreenState.TransactionFailed(
                         errorMessage = "Device configuration not found"
                     )
@@ -581,7 +581,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     if (deviceInfo.nnsmartPostProcessingLimit) {
                         // Post-processing: capture the sale first, validate the
                         // limit afterwards, and reverse the sale if rejected.
-                        Log.d(TAG, "NNSmart: using POST-processing limit flow (sale-first)")
+                        AppLog.d(TAG, "NNSmart: using POST-processing limit flow (sale-first)")
                         processNnsmartPayment(
                             transactionId = transactionId,
                             amountFormatted = amountFormatted,
@@ -590,7 +590,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     } else {
                         // Pre-processing: obtain PAR via Card Verification and
                         // validate the limit before any money is captured.
-                        Log.d(TAG, "NNSmart: using PRE-processing limit flow (card verification)")
+                        AppLog.d(TAG, "NNSmart: using PRE-processing limit flow (card verification)")
                         processNnsmartCardVerificationPayment(
                             transactionId = transactionId,
                             amountFormatted = amountFormatted,
@@ -602,7 +602,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
                 // For MOCK payment provider, show MockPaymentCard screen after Processing screen
                 if (paymentProvider == "mock") {
-                    Log.d(TAG, "Mock payment: Showing MockPaymentCard screen after Processing")
+                    AppLog.d(TAG, "Mock payment: Showing MockPaymentCard screen after Processing")
                     delay(2000) // Show Processing screen for 2 seconds
                     _screenState.value = PaymentScreenState.MockPaymentCard(
                         amount = currentAmount,
@@ -612,7 +612,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 }
                 
                 // Step 2: Perform CardCheckEmv locally with amount including fee
-                Log.d(TAG, "Performing card check with provider: $paymentProvider, amount (including fee): $amountFormatted")
+                AppLog.d(TAG, "Performing card check with provider: $paymentProvider, amount (including fee): $amountFormatted")
                 val cardCheckResult = if (paymentProvider == "mock") {
                     MockPaymentManager.performCardCheck(transactionId, amountFormatted)
                 } else {
@@ -625,7 +625,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 pendingCardCheckResult = cardCheckResult
                 
                 if (!cardCheckResult.success) {
-                    Log.e(TAG, "Card check failed: ${cardCheckResult.message}")
+                    AppLog.e(TAG, "Card check failed: ${cardCheckResult.message}")
                     _screenState.value = PaymentScreenState.TransactionFailed(
                         errorMessage = cardCheckResult.message ?: "Card check failed"
                     )
@@ -643,7 +643,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 // Step 3: Send card token to server for daily limit validation (only for Real Planet payment)
                 // For Mock payment, skip server limit check as it's handled locally
                 if (paymentProvider != "mock") {
-                    Log.d(TAG, "Sending card check result to server for daily limit validation: token=${cardCheckResult.token}")
+                    AppLog.d(TAG, "Sending card check result to server for daily limit validation: token=${cardCheckResult.token}")
                     
                     // Create a custom message with cardToken for daily limit check
                     val cardCheckJson = """
@@ -665,12 +665,12 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     // This will be handled in processSocketMessage when LIMIT_CHECK_RESULT is received
                 } else {
                     // For Mock payment, skip server limit check and proceed directly to sale
-                    Log.d(TAG, "Mock payment: Skipping server limit check, proceeding directly to sale")
+                    AppLog.d(TAG, "Mock payment: Skipping server limit check, proceeding directly to sale")
                     continuePaymentAfterLimitCheck(true, transactionId, "")
                 }
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing local payment", e)
+                AppLog.e(TAG, "Error processing local payment", e)
                 _screenState.value = PaymentScreenState.TransactionFailed(
                     errorMessage = "Payment processing error: ${e.message}"
                 )
@@ -699,7 +699,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         currencyCode: String
     ) {
         try {
-            Log.d(TAG, "NNSmart: performing up-front sale amount=$amountFormatted ref=$transactionId")
+            AppLog.d(TAG, "NNSmart: performing up-front sale amount=$amountFormatted ref=$transactionId")
             val saleResult = NNSmartPaymentManager.performSale(
                 context = getApplication(),
                 amountFormatted = amountFormatted,
@@ -709,7 +709,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             )
 
             if (!saleResult.success) {
-                Log.w(TAG, "NNSmart sale failed: code=${saleResult.resultCode} msg=${saleResult.message}")
+                AppLog.w(TAG, "NNSmart sale failed: code=${saleResult.resultCode} msg=${saleResult.message}")
                 _screenState.value = PaymentScreenState.TransactionFailed(
                     errorMessage = saleResult.message ?: "Payment failed"
                 )
@@ -723,10 +723,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     resultCode = saleResult.resultCode,
                     message = saleResult.message
                 )
-                Log.d(TAG, "NNSmart: sending PAYMENT_RESULT (sale-failed) to backend")
-                Log.d(TAG, "NNSmart: PAYMENT_RESULT payload: $paymentResultJson")
+                AppLog.d(TAG, "NNSmart: sending PAYMENT_RESULT (sale-failed) to backend")
+                AppLog.d(TAG, "NNSmart: PAYMENT_RESULT payload: $paymentResultJson")
                 val sent = socketManager.sendMessage(paymentResultJson)
-                Log.d(TAG, "NNSmart: PAYMENT_RESULT send result: $sent")
+                AppLog.d(TAG, "NNSmart: PAYMENT_RESULT send result: $sent")
 
                 viewModelScope.launch {
                     delay(4000)
@@ -756,11 +756,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             val tokenForLimitCheck = if (rawPar.isNotEmpty()) {
                 rawPar
             } else {
-                Log.w(TAG, "NNSmart: PAR missing on sale response, using dev mock PAR")
+                AppLog.w(TAG, "NNSmart: PAR missing on sale response, using dev mock PAR")
                 NNSMART_DEV_MOCK_PAR
             }
 
-            Log.d(TAG, "NNSmart: sale approved. par='$rawPar' cardRefId=${saleResult.cardRefId} trxId=${saleResult.originalTrxUniqueId} tokenUsed=$tokenForLimitCheck")
+            AppLog.d(TAG, "NNSmart: sale approved. par='$rawPar' cardRefId=${saleResult.cardRefId} trxId=${saleResult.originalTrxUniqueId} tokenUsed=$tokenForLimitCheck")
 
             val cardCheckJson = """
                 {
@@ -774,15 +774,15 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     "timestamp": ${System.currentTimeMillis()}
                 }
             """.trimIndent()
-            Log.d(TAG, "NNSmart: sending CARD_CHECK_RESULT to backend for limit validation")
-            Log.d(TAG, "NNSmart: CARD_CHECK_RESULT payload: $cardCheckJson")
+            AppLog.d(TAG, "NNSmart: sending CARD_CHECK_RESULT to backend for limit validation")
+            AppLog.d(TAG, "NNSmart: CARD_CHECK_RESULT payload: $cardCheckJson")
             val sent = socketManager.sendMessage(cardCheckJson)
-            Log.d(TAG, "NNSmart: CARD_CHECK_RESULT send result: $sent")
+            AppLog.d(TAG, "NNSmart: CARD_CHECK_RESULT send result: $sent")
 
             // Stay on Processing until LIMIT_CHECK_RESULT arrives; the rest
             // of the flow is handled in continuePaymentAfterLimitCheck.
         } catch (e: Exception) {
-            Log.e(TAG, "NNSmart: error during sale", e)
+            AppLog.e(TAG, "NNSmart: error during sale", e)
             _screenState.value = PaymentScreenState.TransactionFailed(
                 errorMessage = "Payment error: ${e.message}"
             )
@@ -813,7 +813,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         currencyCode: String
     ) {
         try {
-            Log.d(TAG, "NNSmart CV: performing card verification amount=$amountFormatted ref=$transactionId")
+            AppLog.d(TAG, "NNSmart CV: performing card verification amount=$amountFormatted ref=$transactionId")
             val cvResult = NNSmartPaymentManager.performCardVerification(
                 context = getApplication(),
                 amountFormatted = amountFormatted,
@@ -823,7 +823,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             )
 
             if (!cvResult.success) {
-                Log.w(TAG, "NNSmart CV: card verification failed: ${cvResult.message}")
+                AppLog.w(TAG, "NNSmart CV: card verification failed: ${cvResult.message}")
                 _screenState.value = PaymentScreenState.TransactionFailed(
                     errorMessage = cvResult.message ?: "Card verification failed"
                 )
@@ -836,7 +836,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     resultCode = "CV_FAILED",
                     message = cvResult.message
                 )
-                Log.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (cv-failed) to backend")
+                AppLog.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (cv-failed) to backend")
                 socketManager.sendMessage(paymentResultJson)
 
                 viewModelScope.launch {
@@ -853,11 +853,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             val tokenForLimitCheck = if (rawPar.isNotEmpty()) {
                 rawPar
             } else {
-                Log.w(TAG, "NNSmart CV: PAR missing on CV response, using dev mock PAR")
+                AppLog.w(TAG, "NNSmart CV: PAR missing on CV response, using dev mock PAR")
                 NNSMART_DEV_MOCK_PAR
             }
 
-            Log.d(TAG, "NNSmart CV: card verified. par='$rawPar' cvTransactionId=${cvResult.transactionId} tokenUsed=$tokenForLimitCheck")
+            AppLog.d(TAG, "NNSmart CV: card verified. par='$rawPar' cvTransactionId=${cvResult.transactionId} tokenUsed=$tokenForLimitCheck")
 
             val cardCheckJson = """
                 {
@@ -871,14 +871,14 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     "timestamp": ${System.currentTimeMillis()}
                 }
             """.trimIndent()
-            Log.d(TAG, "NNSmart CV: sending CARD_CHECK_RESULT to backend for limit validation")
+            AppLog.d(TAG, "NNSmart CV: sending CARD_CHECK_RESULT to backend for limit validation")
             val sent = socketManager.sendMessage(cardCheckJson)
-            Log.d(TAG, "NNSmart CV: CARD_CHECK_RESULT send result: $sent")
+            AppLog.d(TAG, "NNSmart CV: CARD_CHECK_RESULT send result: $sent")
 
             // Stay on Processing until LIMIT_CHECK_RESULT arrives; the rest
             // is handled in continuePaymentAfterLimitCheck → continueNnsmartCvPaymentAfterLimitCheck.
         } catch (e: Exception) {
-            Log.e(TAG, "NNSmart CV: error during card verification", e)
+            AppLog.e(TAG, "NNSmart CV: error during card verification", e)
             _screenState.value = PaymentScreenState.TransactionFailed(
                 errorMessage = "Payment error: ${e.message}"
             )
@@ -905,7 +905,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         cvResult: NNSmartCardVerificationResult
     ) {
         if (approved) {
-            Log.d(TAG, "NNSmart CV: limit approved, confirming card verification (cvTxId=${cvResult.transactionId})")
+            AppLog.d(TAG, "NNSmart CV: limit approved, confirming card verification (cvTxId=${cvResult.transactionId})")
 
             viewModelScope.launch {
                 try {
@@ -914,7 +914,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     )
 
                     if (!saleResult.success) {
-                        Log.w(TAG, "NNSmart CV: confirm failed: code=${saleResult.resultCode} msg=${saleResult.message}")
+                        AppLog.w(TAG, "NNSmart CV: confirm failed: code=${saleResult.resultCode} msg=${saleResult.message}")
                         _screenState.value = PaymentScreenState.TransactionFailed(
                             errorMessage = saleResult.message ?: "Payment capture failed"
                         )
@@ -925,7 +925,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                             resultCode = saleResult.resultCode,
                             message = saleResult.message
                         )
-                        Log.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (confirm-failed) to backend")
+                        AppLog.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (confirm-failed) to backend")
                         socketManager.sendMessage(paymentResultJson)
 
                         pendingNnsmartCardVerification = null
@@ -958,7 +958,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         message = saleResult.message ?: "APPROVED",
                         bankResultCode = "00"
                     )
-                    Log.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (success) to backend")
+                    AppLog.d(TAG, "NNSmart CV: sending PAYMENT_RESULT (success) to backend")
                     socketManager.sendMessage(paymentResultJson)
 
                     _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = true)
@@ -966,7 +966,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     isProcessingPayment = false
                     isHandlingPaymentLocally = false
                 } catch (e: Exception) {
-                    Log.e(TAG, "NNSmart CV: error confirming card verification", e)
+                    AppLog.e(TAG, "NNSmart CV: error confirming card verification", e)
                     _screenState.value = PaymentScreenState.TransactionFailed(
                         errorMessage = "Payment error: ${e.message}"
                     )
@@ -981,7 +981,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         }
 
         // Rejected by backend limit check — simply cancel, no reversal needed.
-        Log.d(TAG, "NNSmart CV: limit rejected, cancelling card verification")
+        AppLog.d(TAG, "NNSmart CV: limit rejected, cancelling card verification")
         _screenState.value = PaymentScreenState.LimitError(
             errorMessage = errorMessage
         )
@@ -990,9 +990,9 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             try {
                 NNSmartPaymentManager.cancelCardVerification(context = getApplication())
-                Log.d(TAG, "NNSmart CV: card verification cancelled successfully")
+                AppLog.d(TAG, "NNSmart CV: card verification cancelled successfully")
             } catch (e: Exception) {
-                Log.e(TAG, "NNSmart CV: error cancelling card verification", e)
+                AppLog.e(TAG, "NNSmart CV: error cancelling card verification", e)
             }
 
             pendingNnsmartCardVerification = null
@@ -1089,7 +1089,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             put("provider", provider)
         }.toString()
         recoveryPrefs.edit().putString("pending_tx", json).apply()
-        Log.d(TAG, "Saved pending recovery transaction for tx=$transactionId provider=$provider")
+        AppLog.d(TAG, "Saved pending recovery transaction for tx=$transactionId provider=$provider")
         audit("Persisted pending_tx tx=$transactionId provider=$provider amount=$amount originalTrxId=$originalTrxUniqueId")
     }
 
@@ -1109,7 +1109,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 provider = json.optString("provider", "nnsmart")
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Invalid pending recovery payload, clearing", e)
+            AppLog.e(TAG, "Invalid pending recovery payload, clearing", e)
             clearPendingRecoveryTransaction()
             null
         }
@@ -1118,7 +1118,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun recoverPendingTransactionIfAny() {
         val pending = readPendingRecoveryTransaction() ?: return
         if (pending.transactionId.isBlank() || pending.originalTrxUniqueId.isBlank()) {
-            Log.w(TAG, "Pending recovery transaction missing required fields, clearing")
+            AppLog.w(TAG, "Pending recovery transaction missing required fields, clearing")
             clearPendingRecoveryTransaction()
             return
         }
@@ -1127,7 +1127,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             return
         }
 
-        Log.w(TAG, "Recovering pending NNSmart transaction after restart: tx=${pending.transactionId}")
+        AppLog.w(TAG, "Recovering pending NNSmart transaction after restart: tx=${pending.transactionId}")
         _screenState.value = PaymentScreenState.ReversingTransaction(
             message = "Recovering previous transaction..."
         )
@@ -1141,7 +1141,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 originalTrxUniqueId = pending.originalTrxUniqueId
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Recovery reversal failed with exception", e)
+            AppLog.e(TAG, "Recovery reversal failed with exception", e)
             false
         }
 
@@ -1194,7 +1194,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             put("provider", provider)
         }.toString()
         recoveryPrefs.edit().putString("pending_ticket_tx", json).apply()
-        Log.d(TAG, "Saved pending ticket-print transaction for tx=$transactionId")
+        AppLog.d(TAG, "Saved pending ticket-print transaction for tx=$transactionId")
         audit("Persisted pending_ticket_tx tx=$transactionId provider=$provider amount=$amount originalRef=$originalRequesterRef")
     }
 
@@ -1218,10 +1218,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
     private fun sendCriticalReversalResult(reversalResultJson: String, reason: String) {
         val sent = socketManager.sendMessage(reversalResultJson)
-        Log.d(TAG, "$reason REVERSAL_RESULT send result: $sent")
+        AppLog.d(TAG, "$reason REVERSAL_RESULT send result: $sent")
         audit("$reason REVERSAL_RESULT send attempted sent=$sent payload=$reversalResultJson")
         if (!sent) {
-            Log.w(TAG, "Failed to deliver REVERSAL_RESULT, persisting for retry")
+            AppLog.w(TAG, "Failed to deliver REVERSAL_RESULT, persisting for retry")
             savePendingCriticalMessage(reversalResultJson)
         } else {
             clearPendingCriticalMessage()
@@ -1232,7 +1232,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         val pendingMessage = readPendingCriticalMessage() ?: return
         if (!socketManager.isConnected()) return
         val sent = socketManager.sendMessage(pendingMessage)
-        Log.d(TAG, "Retry pending critical message send result: $sent")
+        AppLog.d(TAG, "Retry pending critical message send result: $sent")
         audit("Retry pending_critical_message sent=$sent bytes=${pendingMessage.length}")
         if (sent) {
             clearPendingCriticalMessage()
@@ -1250,7 +1250,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 provider = json.optString("provider", "nnsmart")
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Invalid pending ticket-print payload, clearing", e)
+            AppLog.e(TAG, "Invalid pending ticket-print payload, clearing", e)
             clearPendingTicketPrintTransaction()
             null
         }
@@ -1263,7 +1263,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             // Grace period for brief network blips.
             delay(20000)
             if (!socketManager.isConnected() && readPendingTicketPrintTransaction() != null) {
-                Log.w(TAG, "Prolonged disconnect with pending ticket state; starting protective reversal")
+                AppLog.w(TAG, "Prolonged disconnect with pending ticket state; starting protective reversal")
                 audit("Prolonged disconnect threshold reached; protective reversal starts")
                 recoverPendingTicketNotPrintedIfAny()
             }
@@ -1280,7 +1280,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         isRecoveryInProgress = true
 
         try {
-            Log.w(TAG, "Recovering ticket-not-printed transaction: tx=${pending.transactionId}")
+            AppLog.w(TAG, "Recovering ticket-not-printed transaction: tx=${pending.transactionId}")
             _screenState.value = PaymentScreenState.ReversingTransaction(
                 message = "Ticket not confirmed. Reversing transaction..."
             )
@@ -1316,7 +1316,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Ticket recovery reversal exception", e)
+                AppLog.e(TAG, "Ticket recovery reversal exception", e)
                 app.sst.pinto.payment.PlanetPaymentResult(
                     success = false,
                     resultCode = "TICKET_NOT_PRINTED_RECOVERY_EXCEPTION",
@@ -1379,7 +1379,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         saleResult: NNSmartPaymentResult
     ) {
         if (approved) {
-            Log.d(TAG, "NNSmart: limit approved, completing success flow")
+            AppLog.d(TAG, "NNSmart: limit approved, completing success flow")
 
             // Record the sale so a later server-initiated refund can reverse it.
             lastSuccessfulSale = SuccessfulSaleTransaction(
@@ -1402,10 +1402,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 message = saleResult.message ?: "APPROVED",
                 bankResultCode = "00"
             )
-            Log.d(TAG, "NNSmart: sending PAYMENT_RESULT (success) to backend")
-            Log.d(TAG, "NNSmart: PAYMENT_RESULT payload: $paymentResultJson")
+            AppLog.d(TAG, "NNSmart: sending PAYMENT_RESULT (success) to backend")
+            AppLog.d(TAG, "NNSmart: PAYMENT_RESULT payload: $paymentResultJson")
             val sent = socketManager.sendMessage(paymentResultJson)
-            Log.d(TAG, "NNSmart: PAYMENT_RESULT send result: $sent")
+            AppLog.d(TAG, "NNSmart: PAYMENT_RESULT send result: $sent")
 
             _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = true)
             pendingNnsmartSale = null
@@ -1419,7 +1419,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // 1) show limit error
         // 2) show reversal in progress
         // 3) show reversal outcome
-        Log.d(TAG, "NNSmart: limit rejected, showing limit error before reversal")
+        AppLog.d(TAG, "NNSmart: limit rejected, showing limit error before reversal")
         _screenState.value = PaymentScreenState.LimitError(
             errorMessage = errorMessage
         )
@@ -1433,7 +1433,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             val cancelOk = try {
                 val trxId = saleResult.originalTrxUniqueId
                 if (trxId.isNullOrBlank()) {
-                    Log.e(TAG, "NNSmart: cannot reverse sale — originalTrxUniqueId is missing")
+                    AppLog.e(TAG, "NNSmart: cannot reverse sale — originalTrxUniqueId is missing")
                     false
                 } else {
                     NNSmartPaymentManager.performCancel(
@@ -1443,7 +1443,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "NNSmart: error reversing sale", e)
+                AppLog.e(TAG, "NNSmart: error reversing sale", e)
                 false
             }
 
@@ -1460,10 +1460,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 originalTransactionId = transactionId,
                 reversalAmount = currentAmount
             )
-            Log.d(TAG, "NNSmart: sending REVERSAL_RESULT (limit-rejected) to backend")
-            Log.d(TAG, "NNSmart: REVERSAL_RESULT payload: $reversalResultJson")
+            AppLog.d(TAG, "NNSmart: sending REVERSAL_RESULT (limit-rejected) to backend")
+            AppLog.d(TAG, "NNSmart: REVERSAL_RESULT payload: $reversalResultJson")
             val sent = socketManager.sendMessage(reversalResultJson)
-            Log.d(TAG, "NNSmart: REVERSAL_RESULT send result: $sent")
+            AppLog.d(TAG, "NNSmart: REVERSAL_RESULT send result: $sent")
 
             if (cancelOk) {
                 clearPendingTicketPrintTransaction()
@@ -1528,7 +1528,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // If payment is not in progress but we received a LIMIT_ERROR, still show the error screen
         // This can happen if ViewModel was recreated (e.g., after activity restart)
         if (!approved && !isProcessingPayment) {
-            Log.w(TAG, "Received LIMIT_ERROR but payment not in progress - showing error screen anyway")
+            AppLog.w(TAG, "Received LIMIT_ERROR but payment not in progress - showing error screen anyway")
             _screenState.value = PaymentScreenState.LimitError(
                 errorMessage = errorMessage
             )
@@ -1537,13 +1537,13 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         }
         
         if (!isProcessingPayment) {
-            Log.w(TAG, "Received limit check result but payment not in progress")
+            AppLog.w(TAG, "Received limit check result but payment not in progress")
             return
         }
         
         val cardCheckResult = pendingCardCheckResult
         if (cardCheckResult == null) {
-            Log.e(TAG, "No pending card check result found")
+            AppLog.e(TAG, "No pending card check result found")
             // If we have an error message, still show it
             if (!approved) {
                 _screenState.value = PaymentScreenState.LimitError(
@@ -1556,7 +1556,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         }
         
         if (!approved) {
-            Log.d(TAG, "Limit check rejected, cancelling payment")
+            AppLog.d(TAG, "Limit check rejected, cancelling payment")
             // Cancel the card check on terminal - MUST complete before showing error screen
             viewModelScope.launch {
                 try {
@@ -1564,21 +1564,21 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
                     if (deviceInfo != null && deviceInfo.paymentProvider.lowercase() == "integra") {
                         // Only cancel if using real terminal
-                        Log.d(TAG, "Cancelling transaction on terminal with sequenceNumber: ${cardCheckResult.sequenceNumber}")
+                        AppLog.d(TAG, "Cancelling transaction on terminal with sequenceNumber: ${cardCheckResult.sequenceNumber}")
                         val cancelSuccess = PlanetPaymentManager.performCancel(
                             requesterRef = transactionId,
                             sequenceNumberToCancel = cardCheckResult.sequenceNumber
                         )
                         if (cancelSuccess) {
-                            Log.d(TAG, "Transaction cancelled successfully on terminal")
+                            AppLog.d(TAG, "Transaction cancelled successfully on terminal")
                         } else {
-                            Log.w(TAG, "Transaction cancel may have failed or timed out, but continuing")
+                            AppLog.w(TAG, "Transaction cancel may have failed or timed out, but continuing")
                         }
                     } else {
-                        Log.d(TAG, "Not using integra provider, skipping terminal cancel")
+                        AppLog.d(TAG, "Not using integra provider, skipping terminal cancel")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error cancelling payment", e)
+                    AppLog.e(TAG, "Error cancelling payment", e)
                 } finally {
                     // Always show error screen after cancel attempt completes
                     // Show error screen BEFORE resetting flags to ensure it's displayed
@@ -1588,21 +1588,21 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     isProcessingPayment = false
                     isHandlingPaymentLocally = false // Reset flag on limit error
                     allowNavigationFromLimitError = false // Reset flag when showing LIMIT_ERROR
-                    Log.d(TAG, "Limit error screen displayed: $errorMessage")
+                    AppLog.d(TAG, "Limit error screen displayed: $errorMessage")
                 }
             }
             return
         }
         
         // Step 5: Perform Sale transaction locally
-        Log.d(TAG, "Limit check approved, performing sale transaction")
+        AppLog.d(TAG, "Limit check approved, performing sale transaction")
         viewModelScope.launch {
             try {
                 val database = AppDatabase.getDatabase(getApplication())
                 val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
                 
                 if (deviceInfo == null) {
-                    Log.e(TAG, "Device configuration not found")
+                    AppLog.e(TAG, "Device configuration not found")
                     _screenState.value = PaymentScreenState.TransactionFailed(
                         errorMessage = "Device configuration not found"
                     )
@@ -1621,7 +1621,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 val amountFormatted = String.format("%.2f", currentAmount.toDouble())
                 
                 // Perform Sale with amount including fee
-                Log.d(TAG, "Performing sale transaction with provider: $paymentProvider, amount (including fee): $amountFormatted")
+                AppLog.d(TAG, "Performing sale transaction with provider: $paymentProvider, amount (including fee): $amountFormatted")
                 val saleResult = if (paymentProvider == "mock") {
                     MockPaymentManager.performSale(amountFormatted, transactionId)
                 } else {
@@ -1633,7 +1633,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 
                 // Step 6: Show SUCCESS or FAILED screen immediately
                 if (saleResult.success) {
-                    Log.d(TAG, "Payment successful")
+                    AppLog.d(TAG, "Payment successful")
                     // Store successful sale transaction for potential refund/reversal
                     lastSuccessfulSale = SuccessfulSaleTransaction(
                         transactionId = transactionId,
@@ -1646,10 +1646,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         originalRequesterRef = saleResult.requesterTransRefNum ?: transactionId,
                         provider = paymentProvider
                     )
-                    Log.d(TAG, "Stored successful sale transaction: $lastSuccessfulSale")
+                    AppLog.d(TAG, "Stored successful sale transaction: $lastSuccessfulSale")
                     _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = true)
                 } else {
-                    Log.d(TAG, "Payment failed: ${saleResult.message}")
+                    AppLog.d(TAG, "Payment failed: ${saleResult.message}")
                     _screenState.value = PaymentScreenState.TransactionFailed(
                         errorMessage = saleResult.message ?: "Payment failed"
                     )
@@ -1686,7 +1686,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 isProcessingPayment = false
                 isHandlingPaymentLocally = false // Reset flag when payment completes
             } catch (e: Exception) {
-                Log.e(TAG, "Error performing sale transaction", e)
+                AppLog.e(TAG, "Error performing sale transaction", e)
                 _screenState.value = PaymentScreenState.TransactionFailed(
                     errorMessage = "Sale transaction error: ${e.message}"
                 )
@@ -1705,14 +1705,14 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     fun cancelPayment(isTimeout: Boolean = false) {
         val transactionId = currentTransactionId
         if (transactionId == null) {
-            Log.d(TAG, "Cannot cancel payment: No active transaction ID")
+            AppLog.d(TAG, "Cannot cancel payment: No active transaction ID")
             // Reset flags if no active transaction
             isProcessingPayment = false
             isHandlingPaymentLocally = false
             // If there's no active transaction but this is a timeout,
             // we should still show the screensaver if on amount screen
             if (isTimeout && _isOnAmountScreen.value) {
-                Log.d(TAG, "No active transaction, but showing screensaver due to timeout")
+                AppLog.d(TAG, "No active transaction, but showing screensaver due to timeout")
                 forceShowScreensaver()
             }
             return
@@ -1726,9 +1726,9 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         clearPendingRecoveryTransaction()
 
         if (isTimeout) {
-            Log.d(TAG, "Canceling payment due to timeout")
+            AppLog.d(TAG, "Canceling payment due to timeout")
         } else {
-            Log.d(TAG, "User manually canceled payment")
+            AppLog.d(TAG, "User manually canceled payment")
             recordUserInteraction()
         }
 
@@ -1771,12 +1771,12 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * Used when the user presses the timeout/end button
      */
     fun forceShowScreensaver() {
-        Log.d(TAG, "Forcing screensaver to show immediately")
+        AppLog.d(TAG, "Forcing screensaver to show immediately")
         // Save current state
         if (_screenState.value !is PaymentScreenState.DeviceError &&
             _screenState.value !is PaymentScreenState.ConnectionError) {
             lastActiveState = _screenState.value
-            Log.d(TAG, "Saved last active state: ${lastActiveState?.javaClass?.simpleName}")
+            AppLog.d(TAG, "Saved last active state: ${lastActiveState?.javaClass?.simpleName}")
         }
 
         // Pause all timers when showing screensaver
@@ -1790,7 +1790,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * Call this when the user dismisses the screensaver.
      */
     fun dismissScreensaver() {
-        Log.d(TAG, "Dismissing screensaver")
+        AppLog.d(TAG, "Dismissing screensaver")
         _isScreensaverVisible.value = false
 
         // Resume timers after screensaver is dismissed
@@ -1803,7 +1803,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         ensureSocketConnection()
 
         // Request fresh amount selection screen to ensure UI is shown
-        Log.d(TAG, "Requesting fresh amount selection screen after screensaver dismissal")
+        AppLog.d(TAG, "Requesting fresh amount selection screen after screensaver dismissal")
         requestInitialScreen()
     }
 
@@ -1812,7 +1812,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * Used after timeouts to ensure UI is properly displayed.
      */
     private fun requestInitialScreen() {
-        Log.d(TAG, "Requesting initial screen from server")
+        AppLog.d(TAG, "Requesting initial screen from server")
 
         // Reset flags when starting a new screen flow
         isProcessingPayment = false
@@ -1822,7 +1822,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         // Check if we have a valid server URL
         if (serverUrl.isEmpty()) {
-            Log.e(TAG, "Cannot request initial screen: Server URL is empty")
+            AppLog.e(TAG, "Cannot request initial screen: Server URL is empty")
             _screenState.value = PaymentScreenState.ConnectionError
             return
         }
@@ -1833,7 +1833,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         // Generate a new transaction ID for the new session
         val transactionId = UUID.randomUUID().toString()
         currentTransactionId = transactionId
-        Log.d(TAG, "Generated new transaction ID for reset: $transactionId")
+        AppLog.d(TAG, "Generated new transaction ID for reset: $transactionId")
 
         // Send RESET message to get back to amount selection
         val resetMessage = SocketMessage(
@@ -1848,13 +1848,13 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         // Set a temporary loading state until we receive the response
         _screenState.value = PaymentScreenState.Loading
-        Log.d(TAG, "Set temporary loading state while waiting for screen response")
+        AppLog.d(TAG, "Set temporary loading state while waiting for screen response")
 
         // Set up a fallback in case we don't get a response
         viewModelScope.launch {
             delay(3000) // Wait 3 seconds for response
             if (_screenState.value is PaymentScreenState.Loading) {
-                Log.d(TAG, "No response received after 3 seconds, retrying connection")
+                AppLog.d(TAG, "No response received after 3 seconds, retrying connection")
                 socketManager.disconnect() // Force disconnect to get a fresh connection
                 delay(500) // Short delay
                 socketManager.connect(serverUrl) // Reconnect
@@ -1881,7 +1881,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     private fun ensureSocketConnection() {
         // Check if we have a valid server URL
         if (serverUrl.isEmpty()) {
-            Log.e(TAG, "Cannot ensure socket connection: Server URL is empty")
+            AppLog.e(TAG, "Cannot ensure socket connection: Server URL is empty")
             _screenState.value = PaymentScreenState.ConnectionError
             return
         }
@@ -1891,7 +1891,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun retryConnection() {
-        Log.d(TAG, "Retrying connection to $serverUrl")
+        AppLog.d(TAG, "Retrying connection to $serverUrl")
         _screenState.value = PaymentScreenState.Loading
         socketManager.disconnect()
         connectToBackend(serverUrl)
@@ -1902,29 +1902,29 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      */
     private fun sendMessage(message: SocketMessage) {
         val jsonMessage = messageAdapter.toJson(message)
-        Log.d(TAG, "Sending message: $jsonMessage")
+        AppLog.d(TAG, "Sending message: $jsonMessage")
 
         // Check if we have a valid server URL
         if (serverUrl.isEmpty()) {
-            Log.e(TAG, "Cannot send message: Server URL is empty")
+            AppLog.e(TAG, "Cannot send message: Server URL is empty")
             _screenState.value = PaymentScreenState.ConnectionError
             return
         }
 
         // Ensure we're connected before sending
         if (!socketManager.isConnected()) {
-            Log.w(TAG, "Socket not connected, attempting to reconnect to $serverUrl")
+            AppLog.w(TAG, "Socket not connected, attempting to reconnect to $serverUrl")
             socketManager.connect(serverUrl)
 
             // Queue up message send after a brief delay
             viewModelScope.launch {
                 delay(1000) // Wait 1 second for connection
                 if (socketManager.isConnected()) {
-                    Log.d(TAG, "Connection established, sending delayed message")
+                    AppLog.d(TAG, "Connection established, sending delayed message")
                     val success = socketManager.sendMessage(jsonMessage)
-                    Log.d(TAG, "Delayed message send result: $success")
+                    AppLog.d(TAG, "Delayed message send result: $success")
                 } else {
-                    Log.e(TAG, "Still not connected, unable to send message")
+                    AppLog.e(TAG, "Still not connected, unable to send message")
                     _screenState.value = PaymentScreenState.ConnectionError
                 }
             }
@@ -1933,10 +1933,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         // Normal send if already connected
         val success = socketManager.sendMessage(jsonMessage)
-        Log.d(TAG, "Message send result: $success")
+        AppLog.d(TAG, "Message send result: $success")
 
         if (!success) {
-            Log.e(TAG, "Failed to send message, checking connection")
+            AppLog.e(TAG, "Failed to send message, checking connection")
             socketManager.ensureConnected()
         }
     }
@@ -1954,53 +1954,53 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             message?.let {
                 // Store transaction ID for response
                 currentTransactionId = it.transactionId
-                Log.d(TAG, "=== SOCKET MESSAGE RECEIVED ===")
-                Log.d(TAG, "Raw JSON: $jsonMessage")
-                Log.d(TAG, "Message Type: ${it.messageType}")
-                Log.d(TAG, "Screen: ${it.screen}")
-                Log.d(TAG, "Transaction ID: ${it.transactionId}")
-                Log.d(TAG, "Current Screen State: ${_screenState.value::class.simpleName}")
-                Log.d(TAG, "Timestamp: ${it.timestamp}")
-                Log.d(TAG, "================================")
+                AppLog.d(TAG, "=== SOCKET MESSAGE RECEIVED ===")
+                AppLog.d(TAG, "Raw JSON: $jsonMessage")
+                AppLog.d(TAG, "Message Type: ${it.messageType}")
+                AppLog.d(TAG, "Screen: ${it.screen}")
+                AppLog.d(TAG, "Transaction ID: ${it.transactionId}")
+                AppLog.d(TAG, "Current Screen State: ${_screenState.value::class.simpleName}")
+                AppLog.d(TAG, "Timestamp: ${it.timestamp}")
+                AppLog.d(TAG, "================================")
 
                 when (it.messageType) {
                     "SCREEN_CHANGE" -> {
-                        Log.d(TAG, "Processing SCREEN_CHANGE to: ${it.screen}")
+                        AppLog.d(TAG, "Processing SCREEN_CHANGE to: ${it.screen}")
                         handleScreenChange(it)
-                        Log.d(TAG, "New Screen State: ${_screenState.value::class.simpleName}")
+                        AppLog.d(TAG, "New Screen State: ${_screenState.value::class.simpleName}")
                     }
                     "ERROR" -> {
-                        Log.d(TAG, "Processing ERROR message")
+                        AppLog.d(TAG, "Processing ERROR message")
                         handleError(it)
                     }
                     "STATUS_UPDATE" -> {
-                        Log.d(TAG, "Processing STATUS_UPDATE message")
+                        AppLog.d(TAG, "Processing STATUS_UPDATE message")
                         handleStatusUpdate(it)
                     }
                     "LIMIT_CHECK_RESULT" -> {
-                        Log.d(TAG, "Processing LIMIT_CHECK_RESULT message")
+                        AppLog.d(TAG, "Processing LIMIT_CHECK_RESULT message")
                         handleLimitCheckResult(it)
                     }
                     "DEVICE_INFO" -> {
-                        Log.d(TAG, "Processing DEVICE_INFO message")
+                        AppLog.d(TAG, "Processing DEVICE_INFO message")
                         handleDeviceInfo(it)
                     }
                     "RESTART_APP" -> {
-                        Log.d(TAG, "Processing RESTART_APP message")
+                        AppLog.d(TAG, "Processing RESTART_APP message")
                         handleRestartApp(it)
                     }
                     "REFUND_REQUEST", "REVERSAL_REQUEST" -> {
-                        Log.d(TAG, "Processing ${it.messageType} message")
+                        AppLog.d(TAG, "Processing ${it.messageType} message")
                         handleRefundRequest(it)
                     }
                     else -> {
-                        Log.d(TAG, "Unhandled message type: ${it.messageType}")
+                        AppLog.d(TAG, "Unhandled message type: ${it.messageType}")
                     }
                 }
             }
         } catch (e: Exception) {
             // Handle parsing error
-            Log.e(TAG, "Error parsing socket message: $jsonMessage", e)
+            AppLog.e(TAG, "Error parsing socket message: $jsonMessage", e)
             _screenState.value = PaymentScreenState.DeviceError("Invalid message format: ${e.message}")
             // Make sure to update screen state flag
             _isOnAmountScreen.value = false
@@ -2011,12 +2011,12 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * Process screen state changes to track when we're on the amount selection screen
      */
     fun respondToReceiptQuestion(wantsReceipt: Boolean) {
-        Log.d(TAG, "Receipt response: $wantsReceipt")
+        AppLog.d(TAG, "Receipt response: $wantsReceipt")
         recordUserInteraction()
 
         val transactionId = currentTransactionId
         if (transactionId == null) {
-            Log.e(TAG, "Cannot respond to receipt question: No active transaction ID")
+            AppLog.e(TAG, "Cannot respond to receipt question: No active transaction ID")
             return
         }
 
@@ -2036,34 +2036,34 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     // In PaymentViewModel.kt, update the handleScreenChange method
 
     private fun handleScreenChange(message: SocketMessage) {
-        Log.d(TAG, "Handling screen change to: ${message.screen}")
+        AppLog.d(TAG, "Handling screen change to: ${message.screen}")
         
         // If we're currently showing LIMIT_ERROR, don't allow other screens to override it
         // unless the user has explicitly requested a reset (allowNavigationFromLimitError flag)
         if (_screenState.value is PaymentScreenState.LimitError && 
             message.screen != "LIMIT_ERROR" && 
             !allowNavigationFromLimitError) {
-            Log.d(TAG, "Ignoring screen change to ${message.screen} - LIMIT_ERROR screen is active. User must interact to dismiss.")
+            AppLog.d(TAG, "Ignoring screen change to ${message.screen} - LIMIT_ERROR screen is active. User must interact to dismiss.")
             return
         }
         
         // Reset the flag after allowing navigation
         if (allowNavigationFromLimitError && message.screen == "AMOUNT_SELECT") {
             allowNavigationFromLimitError = false
-            Log.d(TAG, "Navigation from LIMIT_ERROR allowed - resetting flag")
+            AppLog.d(TAG, "Navigation from LIMIT_ERROR allowed - resetting flag")
         }
         
         when (message.screen) {
             "INFO_SCREEN" -> {
                 // Handle INFO_SCREEN request for device information
-                Log.d(TAG, "Received INFO_SCREEN request")
+                AppLog.d(TAG, "Received INFO_SCREEN request")
                 val requestType = message.data?.requestType
                 if (requestType == "DEVICE_INFO") {
-                    Log.d(TAG, "INFO_SCREEN request for device info, sending device IP and serial number")
+                    AppLog.d(TAG, "INFO_SCREEN request for device info, sending device IP and serial number")
                     sendDeviceIpAddress(message.transactionId)
                     sendDeviceSerialNumber(message.transactionId)
                 } else {
-                    Log.d(TAG, "INFO_SCREEN with unknown requestType: $requestType")
+                    AppLog.d(TAG, "INFO_SCREEN with unknown requestType: $requestType")
                 }
                 // Note: INFO_SCREEN does not change the current screen state
                 return
@@ -2072,7 +2072,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 clearPendingTicketPrintTransaction()
                 val data = message.data
                 if (data != null && data.amounts != null && data.currency != null) {
-                    Log.d(TAG, "Changing to AMOUNT_SELECT screen with ${data.amounts.size} amounts")
+                    AppLog.d(TAG, "Changing to AMOUNT_SELECT screen with ${data.amounts.size} amounts")
                     _screenState.value = PaymentScreenState.AmountSelect(
                         amounts = data.amounts,
                         currency = data.currency,
@@ -2080,24 +2080,24 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     )
                     // Set flag that we're on the amount selection screen
                     _isOnAmountScreen.value = true
-                    Log.d(TAG, "Set isOnAmountScreen = true")
+                    AppLog.d(TAG, "Set isOnAmountScreen = true")
                 } else {
-                    Log.e(TAG, "Invalid data for AMOUNT_SELECT: $data")
+                    AppLog.e(TAG, "Invalid data for AMOUNT_SELECT: $data")
                     _isOnAmountScreen.value = false
                 }
             }
             "RECEIPT_QUESTION" -> {
-                Log.d(TAG, "Received RECEIPT_QUESTION screen change")
+                AppLog.d(TAG, "Received RECEIPT_QUESTION screen change")
                 viewModelScope.launch {
                     val database = AppDatabase.getDatabase(getApplication())
                     val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
                     val requireCardReceipt = deviceInfo?.requireCardReceipt ?: true
                     
                     if (requireCardReceipt) {
-                        Log.d(TAG, "requireCardReceipt is enabled - showing receipt question screen")
+                        AppLog.d(TAG, "requireCardReceipt is enabled - showing receipt question screen")
                         _screenState.value = PaymentScreenState.ReceiptQuestion(showGif = true)
                     } else {
-                        Log.d(TAG, "requireCardReceipt is disabled - skipping receipt question screen")
+                        AppLog.d(TAG, "requireCardReceipt is disabled - skipping receipt question screen")
                         // Automatically respond NO to receipt question
                         respondToReceiptQuestion(wantsReceipt = false)
                     }
@@ -2105,7 +2105,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 }
             }
             "TIMEOUT" -> {
-                Log.d(TAG, "Server sent TIMEOUT message - showing timeout screen")
+                AppLog.d(TAG, "Server sent TIMEOUT message - showing timeout screen")
                 _screenState.value = PaymentScreenState.Timeout
                 _isOnAmountScreen.value = false
 
@@ -2114,7 +2114,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 // Don't auto-navigate after timeout
             }
             "KEYPAD" -> {
-                Log.d(TAG, "Changing to KEYPAD screen")
+                AppLog.d(TAG, "Changing to KEYPAD screen")
                 _screenState.value = PaymentScreenState.KeypadEntry(
                     currency = message.data?.currency ?: "£",
                     minAmount = 10, // Default
@@ -2122,16 +2122,16 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 )
                 // Not on amount selection screen anymore
                 _isOnAmountScreen.value = false
-                Log.d(TAG, "Set isOnAmountScreen = false")
+                AppLog.d(TAG, "Set isOnAmountScreen = false")
             }
             "PAYMENT_METHOD" -> {
                 // Check if we're handling payment locally (YASPA disabled) - if so, ignore this screen change
                 if (isHandlingPaymentLocally) {
-                    Log.d(TAG, "Ignoring PAYMENT_METHOD screen - handling payment locally (YASPA disabled)")
+                    AppLog.d(TAG, "Ignoring PAYMENT_METHOD screen - handling payment locally (YASPA disabled)")
                     return
                 }
                 
-                Log.d(TAG, "Changing to PAYMENT_METHOD screen with amount: $currentAmount")
+                AppLog.d(TAG, "Changing to PAYMENT_METHOD screen with amount: $currentAmount")
                 _screenState.value = PaymentScreenState.PaymentMethodSelect(
                     methods = message.data?.methods ?: listOf("DEBIT_CARD", "PAY_BY_BANK"),
                     amount = currentAmount, // Use stored amount (includes fee)
@@ -2140,23 +2140,23 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 )
                 // Not on amount selection screen anymore
                 _isOnAmountScreen.value = false
-                Log.d(TAG, "Set isOnAmountScreen = false")
+                AppLog.d(TAG, "Set isOnAmountScreen = false")
             }
             "QR_CODE" -> {
                 val paymentUrl = message.data?.paymentUrl ?: ""
-                Log.d(TAG, "Changing to QR_CODE screen with URL: $paymentUrl")
+                AppLog.d(TAG, "Changing to QR_CODE screen with URL: $paymentUrl")
                 _screenState.value = PaymentScreenState.QrCodeDisplay(
                     paymentUrl = paymentUrl
                 )
                 _isOnAmountScreen.value = false
             }
             "PROCESSING" -> {
-                Log.d(TAG, "Changing to PROCESSING screen")
+                AppLog.d(TAG, "Changing to PROCESSING screen")
                 _screenState.value = PaymentScreenState.Processing
                 _isOnAmountScreen.value = false
             }
             "SUCCESS" -> {
-                Log.d(TAG, "Changing to SUCCESS screen")
+                AppLog.d(TAG, "Changing to SUCCESS screen")
                 _screenState.value = PaymentScreenState.TransactionSuccess(
                     showReceipt = true
                 )
@@ -2164,7 +2164,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             "FAILED" -> {
                 val errorMessage = message.data?.errorMessage
-                Log.d(TAG, "Changing to FAILED screen with error: $errorMessage")
+                AppLog.d(TAG, "Changing to FAILED screen with error: $errorMessage")
                 _screenState.value = PaymentScreenState.TransactionFailed(
                     errorMessage = errorMessage
                 )
@@ -2178,7 +2178,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             "LIMIT_ERROR" -> {
                 val errorMessage = message.data?.errorMessage ?: "Limit exceeded"
-                Log.d(TAG, "Changing to LIMIT_ERROR screen with message: $errorMessage")
+                AppLog.d(TAG, "Changing to LIMIT_ERROR screen with message: $errorMessage")
                 _screenState.value = PaymentScreenState.LimitError(
                     errorMessage = errorMessage
                 )
@@ -2187,25 +2187,25 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 allowNavigationFromLimitError = false
             }
             "PRINT_TICKET" -> {
-                Log.d(TAG, "Changing to PRINT_TICKET screen")
+                AppLog.d(TAG, "Changing to PRINT_TICKET screen")
                 _screenState.value = PaymentScreenState.PrintingTicket
                 _isOnAmountScreen.value = false
             }
             "COLLECT_TICKET" -> {
-                Log.d(TAG, "Changing to COLLECT_TICKET screen")
+                AppLog.d(TAG, "Changing to COLLECT_TICKET screen")
                 clearPendingTicketPrintTransaction()
                 _screenState.value = PaymentScreenState.CollectTicket
                 _isOnAmountScreen.value = false
             }
             "THANK_YOU" -> {
-                Log.d(TAG, "Changing to THANK_YOU screen")
+                AppLog.d(TAG, "Changing to THANK_YOU screen")
                 clearPendingTicketPrintTransaction()
                 _screenState.value = PaymentScreenState.ThankYou
                 _isOnAmountScreen.value = false
             }
             // Add this case to the when statement in handleScreenChange method
             "REFUND_PROCESSING" -> {
-                Log.d(TAG, "Changing to REFUND_PROCESSING screen")
+                AppLog.d(TAG, "Changing to REFUND_PROCESSING screen")
                 _screenState.value = PaymentScreenState.RefundProcessing(
                     errorMessage = message.data?.errorMessage
                 )
@@ -2213,7 +2213,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             "PRINTER_ERROR" -> {
                 val errorMessage = message.data?.errorMessage ?: "Printer error occurred"
-                Log.d(TAG, "Changing to PRINTER_ERROR screen with message: $errorMessage")
+                AppLog.d(TAG, "Changing to PRINTER_ERROR screen with message: $errorMessage")
                 _screenState.value = PaymentScreenState.DeviceError(
                     errorMessage = errorMessage
                 )
@@ -2221,7 +2221,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             }
             "DEVICE_ERROR" -> {
                 val errorMessage = message.data?.errorMessage ?: "Unknown device error"
-                Log.d(TAG, "Changing to DEVICE_ERROR screen with message: $errorMessage")
+                AppLog.d(TAG, "Changing to DEVICE_ERROR screen with message: $errorMessage")
                 _screenState.value = PaymentScreenState.DeviceError(
                     errorMessage = errorMessage
                 )
@@ -2235,7 +2235,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      */
     private fun handleError(message: SocketMessage) {
         val errorMessage = message.data?.errorMessage
-        Log.d(TAG, "Handling error: $errorMessage")
+        AppLog.d(TAG, "Handling error: $errorMessage")
         _screenState.value = PaymentScreenState.TransactionFailed(
             errorMessage = errorMessage
         )
@@ -2253,7 +2253,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      */
     private fun handleStatusUpdate(message: SocketMessage) {
         // Handle status updates if needed
-        Log.d(TAG, "Received status update: ${message.data}")
+        AppLog.d(TAG, "Received status update: ${message.data}")
     }
     
     /**
@@ -2261,22 +2261,22 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * This is received after sending CARD_CHECK_RESULT for daily limit validation.
      */
     private fun handleLimitCheckResult(message: SocketMessage) {
-        Log.d(TAG, "Received LIMIT_CHECK_RESULT: screen=${message.screen}")
+        AppLog.d(TAG, "Received LIMIT_CHECK_RESULT: screen=${message.screen}")
         
         val transactionId = message.transactionId
         if (transactionId != currentTransactionId) {
-            Log.w(TAG, "LIMIT_CHECK_RESULT transaction ID mismatch: expected=$currentTransactionId, received=$transactionId")
+            AppLog.w(TAG, "LIMIT_CHECK_RESULT transaction ID mismatch: expected=$currentTransactionId, received=$transactionId")
         }
         
         // Check if limit check was approved or rejected
         val approved = message.screen == "APPROVED" || message.screen.uppercase() == "APPROVED"
         
         if (approved) {
-            Log.d(TAG, "Limit check approved, continuing payment")
+            AppLog.d(TAG, "Limit check approved, continuing payment")
             continuePaymentAfterLimitCheck(true, transactionId, "")
         } else {
             val errorMessage = message.data?.errorMessage ?: "Daily spending limit exceeded"
-            Log.d(TAG, "Limit check rejected: $errorMessage")
+            AppLog.d(TAG, "Limit check rejected: $errorMessage")
             continuePaymentAfterLimitCheck(false, transactionId, errorMessage)
         }
     }
@@ -2286,11 +2286,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * This can be either device configuration from server or device info request.
      */
     private fun handleDeviceInfo(message: SocketMessage) {
-        Log.d(TAG, "Received DEVICE_INFO message")
+        AppLog.d(TAG, "Received DEVICE_INFO message")
         
         val data = message.data
         if (data == null) {
-            Log.d(TAG, "DEVICE_INFO message has no data, ignoring")
+            AppLog.d(TAG, "DEVICE_INFO message has no data, ignoring")
             return
         }
         
@@ -2304,7 +2304,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                        data.requireCardReceipt != null
         
         if (hasConfig) {
-            Log.d(TAG, "Received device configuration from server")
+            AppLog.d(TAG, "Received device configuration from server")
             viewModelScope.launch {
                 try {
                     val database = AppDatabase.getDatabase(getApplication())
@@ -2331,13 +2331,13 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     // Use insertDeviceInfo which handles both insert and update (REPLACE strategy)
                     deviceInfoDao.insertDeviceInfo(deviceInfo)
                     
-                    Log.d(TAG, "Device configuration saved: provider=${deviceInfo.paymentProvider}, yaspaEnabled=${deviceInfo.yaspaEnabled}")
+                    AppLog.d(TAG, "Device configuration saved: provider=${deviceInfo.paymentProvider}, yaspaEnabled=${deviceInfo.yaspaEnabled}")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error saving device configuration", e)
+                    AppLog.e(TAG, "Error saving device configuration", e)
                 }
             }
         } else {
-            Log.d(TAG, "DEVICE_INFO message is not configuration, may be device info request")
+            AppLog.d(TAG, "DEVICE_INFO message is not configuration, may be device info request")
             // Could be a request for device info - handle if needed
         }
     }
@@ -2347,7 +2347,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * This instructs the client to restart the application.
      */
     private fun handleRestartApp(message: SocketMessage) {
-        Log.d(TAG, "Received RESTART_APP message, closing application")
+        AppLog.d(TAG, "Received RESTART_APP message, closing application")
         
         // Close the application
         viewModelScope.launch {
@@ -2368,7 +2368,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 val ipAddress = getDeviceIpAddress()
                 val txId = transactionId ?: currentTransactionId ?: UUID.randomUUID().toString()
                 
-                Log.d(TAG, "Sending device IP address: $ipAddress")
+                AppLog.d(TAG, "Sending device IP address: $ipAddress")
                 
                 val messageJson = """
                     {
@@ -2384,7 +2384,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 
                 socketManager.sendMessage(messageJson)
             } catch (e: Exception) {
-                Log.e(TAG, "Error sending device IP address", e)
+                AppLog.e(TAG, "Error sending device IP address", e)
             }
         }
     }
@@ -2401,7 +2401,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 val serialNumber = getDeviceSerialNumber()
                 val txId = transactionId ?: currentTransactionId ?: UUID.randomUUID().toString()
                 
-                Log.d(TAG, "Sending device serial number: $serialNumber")
+                AppLog.d(TAG, "Sending device serial number: $serialNumber")
                 
                 val messageJson = """
                     {
@@ -2417,7 +2417,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 
                 socketManager.sendMessage(messageJson)
             } catch (e: Exception) {
-                Log.e(TAG, "Error sending device serial number", e)
+                AppLog.e(TAG, "Error sending device serial number", e)
             }
         }
     }
@@ -2430,12 +2430,12 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     private fun handleRefundRequest(message: SocketMessage) {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "Handling refund/reversal request: ${message.messageType}")
+                AppLog.d(TAG, "Handling refund/reversal request: ${message.messageType}")
                 
                 // Check if we have a last successful sale transaction
                 val lastSale = lastSuccessfulSale
                 if (lastSale == null) {
-                    Log.e(TAG, "Cannot process refund/reversal: No successful sale transaction found")
+                    AppLog.e(TAG, "Cannot process refund/reversal: No successful sale transaction found")
                     // Send error response
                     val errorResponse = """
                         {
@@ -2478,13 +2478,13 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     !localOriginalRequesterRef.isNullOrBlank() &&
                     backendOriginalRequesterRef != localOriginalRequesterRef
                 ) {
-                    Log.w(
+                    AppLog.w(
                         TAG,
                         "NNSmart reversal ref mismatch: backendRef=$backendOriginalRequesterRef localRef=$localOriginalRequesterRef - using localRef"
                     )
                 }
                 
-                Log.d(
+                AppLog.d(
                     TAG,
                     "Processing reversal: provider=$paymentProvider originalTxId=$originalTransactionId originalRef=$originalRequesterRef amount=$reversalAmount"
                 )
@@ -2506,7 +2506,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 }
                 
                 // Perform reversal
-                Log.d(TAG, "Performing sale reversal with provider: $paymentProvider, amount: $amountFormatted")
+                AppLog.d(TAG, "Performing sale reversal with provider: $paymentProvider, amount: $amountFormatted")
                 val reversalResult = when {
                     paymentProvider == "mock" -> MockPaymentManager.performSaleReversal(
                         amountFormatted = amountFormatted,
@@ -2565,7 +2565,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 socketManager.sendMessage(reversalResultJson)
                 
                 if (reversalResult.success) {
-                    Log.d(TAG, "Reversal successful - showing success screen")
+                    AppLog.d(TAG, "Reversal successful - showing success screen")
                     // Clear the last successful sale since it's been reversed
                     lastSuccessfulSale = null
                     // Clear pending ticket-print recovery marker so a future
@@ -2581,16 +2581,16 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     // Show success screen briefly, then return to amount selection
                     _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = false)
                     _isOnAmountScreen.value = false
-                    Log.d(TAG, "Screen state changed to TransactionSuccess after reversal")
+                    AppLog.d(TAG, "Screen state changed to TransactionSuccess after reversal")
                     
                     // After showing success, automatically request initial screen from server
                     viewModelScope.launch {
                         delay(3000) // Show success for 3 seconds
-                        Log.d(TAG, "Requesting initial screen after successful reversal")
+                        AppLog.d(TAG, "Requesting initial screen after successful reversal")
                         requestInitialScreen()
                     }
                 } else {
-                    Log.e(TAG, "Reversal failed: ${reversalResult.message}")
+                    AppLog.e(TAG, "Reversal failed: ${reversalResult.message}")
                     // Ensure screensaver is hidden to show failed screen
                     _isScreensaverVisible.value = false
                     timeoutManager.recordUserInteraction() // Reset timeout timer
@@ -2600,7 +2600,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         errorMessage = reversalResult.message ?: "Reversal failed"
                     )
                     _isOnAmountScreen.value = false
-                    Log.d(TAG, "Screen state changed to TransactionFailed after reversal")
+                    AppLog.d(TAG, "Screen state changed to TransactionFailed after reversal")
                     
                     // Auto-return to amount selection after 4 seconds
                     viewModelScope.launch {
@@ -2610,7 +2610,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 }
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing refund/reversal request", e)
+                AppLog.e(TAG, "Error processing refund/reversal request", e)
                 // Send error response
                 val errorResponse = """
                     {
@@ -2632,7 +2632,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onCleared() {
         super.onCleared()
-        Log.d(TAG, "ViewModel being cleared, canceling timers")
+        AppLog.d(TAG, "ViewModel being cleared, canceling timers")
         timeoutManager.cancelTimers()
     }
 }

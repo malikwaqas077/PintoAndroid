@@ -2,7 +2,7 @@ package app.sst.pinto.config
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 
 class ConfigManager private constructor(context: Context) {
     private val TAG = "ConfigManager"
@@ -14,6 +14,7 @@ class ConfigManager private constructor(context: Context) {
         private const val KEY_SERVER_PORT = "server_port"
         private const val KEY_IS_FIRST_LAUNCH = "is_first_launch"
         private const val DEFAULT_PORT = "5001"
+        private const val KEY_PORTAL_URL = "portal_url"
 
         @Volatile
         private var instance: ConfigManager? = null
@@ -61,20 +62,69 @@ class ConfigManager private constructor(context: Context) {
     }
 
     /**
+     * Ask portal base host (e.g. askportal.azurewebsites.net or ws://192.168.1.10:55362).
+     * Stored as entered by the user; [getPortalWebSocketUrl] normalizes to .../deviceHub.
+     */
+    fun getPortalUrl(): String {
+        return prefs.getString(KEY_PORTAL_URL, "")?.trim().orEmpty()
+    }
+
+    /**
+     * Full WebSocket URL for Ask portal deviceHub.
+     * Accepts host, ws://host, wss://host, or a full .../deviceHub URL.
+     */
+    fun getPortalWebSocketUrl(): String {
+        val raw = getPortalUrl()
+        if (raw.isBlank()) return ""
+
+        var url = raw.trim().trimEnd('/')
+        if (!url.startsWith("ws://", ignoreCase = true) &&
+            !url.startsWith("wss://", ignoreCase = true) &&
+            !url.startsWith("http://", ignoreCase = true) &&
+            !url.startsWith("https://", ignoreCase = true)
+        ) {
+            // Bare host — default to secure WebSocket
+            url = "wss://$url"
+        }
+        url = url
+            .replace(Regex("^http://", RegexOption.IGNORE_CASE), "ws://")
+            .replace(Regex("^https://", RegexOption.IGNORE_CASE), "wss://")
+
+        return if (url.endsWith("/deviceHub", ignoreCase = true)) {
+            url
+        } else {
+            "$url/deviceHub"
+        }
+    }
+
+    fun savePortalUrl(portalUrl: String): Boolean {
+        return try {
+            prefs.edit()
+                .putString(KEY_PORTAL_URL, portalUrl.trim())
+                .apply()
+            AppLog.d(TAG, "Portal URL saved: ${getPortalWebSocketUrl()}")
+            true
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Error saving portal URL", e)
+            false
+        }
+    }
+
+    /**
      * Save server configuration
      */
     fun saveServerConfig(ip: String, port: String = DEFAULT_PORT): Boolean {
         return try {
             // Validate server address format (IP or domain)
             if (!isValidServerAddress(ip)) {
-                Log.e(TAG, "Invalid server address format: $ip")
+                AppLog.e(TAG, "Invalid server address format: $ip")
                 return false
             }
 
             // Validate port
             val portInt = port.toIntOrNull()
             if (portInt == null || portInt !in 1..65535) {
-                Log.e(TAG, "Invalid port number: $port")
+                AppLog.e(TAG, "Invalid port number: $port")
                 return false
             }
 
@@ -84,10 +134,10 @@ class ConfigManager private constructor(context: Context) {
                 .putBoolean(KEY_IS_FIRST_LAUNCH, false)
                 .apply()
 
-            Log.d(TAG, "Server config saved: ws://$ip:$port")
+            AppLog.d(TAG, "Server config saved: ws://$ip:$port")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving server config", e)
+            AppLog.e(TAG, "Error saving server config", e)
             false
         }
     }
@@ -101,7 +151,7 @@ class ConfigManager private constructor(context: Context) {
             .remove(KEY_SERVER_PORT)
             .putBoolean(KEY_IS_FIRST_LAUNCH, true)
             .apply()
-        Log.d(TAG, "Server config cleared")
+        AppLog.d(TAG, "Server config cleared")
     }
 
     /**

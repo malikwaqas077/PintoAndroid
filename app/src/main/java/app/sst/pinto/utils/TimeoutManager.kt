@@ -1,6 +1,5 @@
 package app.sst.pinto.utils
 
-import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +34,7 @@ class TimeoutManager private constructor() {
      * Set up the timeout manager with a callback for timeout events.
      */
     fun setup(onTimeout: () -> Unit) {
-        Log.d(TAG, "Setting up TimeoutManager with callback")
+        AppLog.d(TAG, "Setting up TimeoutManager with callback")
         this.onTimeoutCallback = onTimeout
         resetTimer()
     }
@@ -71,7 +70,7 @@ class TimeoutManager private constructor() {
             try {
                 delay(timeoutDuration)
                 if (isActive) {
-                    Log.d(TAG, "Timeout occurred after $timeoutDuration ms")
+                    AppLog.d(TAG, "Timeout occurred after $timeoutDuration ms")
                     _timeoutOccurred.value = true
                     onTimeoutCallback?.invoke()
                 }
@@ -80,7 +79,7 @@ class TimeoutManager private constructor() {
                 // coroutine machinery treats it as a normal cancellation.
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error in timeout timer", e)
+                AppLog.e(TAG, "Unexpected error in timeout timer", e)
             }
         }
     }
@@ -89,7 +88,7 @@ class TimeoutManager private constructor() {
      * Pause timers when showing screensaver.
      */
     fun pauseTimersForScreensaver() {
-        Log.d(TAG, "Pausing timers for screensaver")
+        AppLog.d(TAG, "Pausing timers for screensaver")
         timeoutJob?.cancel()
         timeoutJob = null
     }
@@ -98,7 +97,7 @@ class TimeoutManager private constructor() {
      * Resume timers after screensaver is dismissed.
      */
     fun resumeTimersAfterScreensaver() {
-        Log.d(TAG, "Resuming timers after screensaver")
+        AppLog.d(TAG, "Resuming timers after screensaver")
         resetTimer()
     }
 
@@ -106,7 +105,7 @@ class TimeoutManager private constructor() {
      * Cancels all timers.
      */
     fun cancelTimers() {
-        Log.d(TAG, "Canceling all timers")
+        AppLog.d(TAG, "Canceling all timers")
         timeoutJob?.cancel()
         timeoutJob = null
     }
