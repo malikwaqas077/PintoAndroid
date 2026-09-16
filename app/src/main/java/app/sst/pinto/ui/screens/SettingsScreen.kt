@@ -172,6 +172,8 @@ fun SettingsScreen(
                                     "MOCK" -> "Mock (Simulated)"
                                     "INTEGRA" -> "Integra (Real)"
                                     "NNSMART", "NEWLAND" -> "NNSmart (Newland)"
+                                    "CCV" -> "CCV Terminal"
+                                    "SWITCHIO", "MONET", "MONETPLUS" -> "Switchio / Monet+"
                                     else -> info.paymentProvider
                                 }
                             )
@@ -181,15 +183,22 @@ fun SettingsScreen(
                                 value = if (info.requireCardReceipt) "Enabled" else "Disabled"
                             )
 
-                            // Newland/NNSmart only: choose when the daily limit
+                            // Newland/NNSmart and Switchio/Monet+: choose when the daily limit
                             // is validated relative to capturing payment.
-                            if (info.paymentProvider.uppercase() in listOf("NNSMART", "NEWLAND")) {
+                            if (info.paymentProvider.uppercase() in listOf(
+                                    "NNSMART", "NEWLAND", "SWITCHIO", "MONET", "MONETPLUS"
+                                )
+                            ) {
                                 SettingToggleRow(
-                                    label = "Limit Check Timing",
+                                    label = if (info.nnsmartPostProcessingLimit) {
+                                        "Post Processing"
+                                    } else {
+                                        "Pre Processing"
+                                    },
                                     description = if (info.nnsmartPostProcessingLimit) {
                                         "Post-processing: take payment first, check limit after, reverse if exceeded"
                                     } else {
-                                        "Pre-processing: check limit before payment (card verification)"
+                                        "Pre-processing: check limit before payment (read card first)"
                                     },
                                     checked = info.nnsmartPostProcessingLimit,
                                     onCheckedChange = { enabled ->
@@ -219,7 +228,7 @@ fun SettingsScreen(
             item {
                 SettingItemCard(
                     title = "Server Configuration",
-                    description = "WebSocket server configuration",
+                    description = "Payment WebSocket and Ask portal (remote logs)",
                     onClick = onOpenServerConfig
                 )
             }

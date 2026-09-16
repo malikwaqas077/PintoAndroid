@@ -22,12 +22,14 @@ import androidx.compose.ui.unit.sp
 fun ServerConfigScreen(
     currentIp: String = "",
     currentPort: String = "5001",
+    currentPortalUrl: String = "",
     isFirstTime: Boolean = true,
-    onSave: (String, String) -> Unit,
+    onSave: (String, String, String) -> Unit,
     onCancel: (() -> Unit)? = null
 ) {
     var ipAddress by remember { mutableStateOf(currentIp) }
     var port by remember { mutableStateOf(currentPort) }
+    var portalUrl by remember { mutableStateOf(currentPortalUrl) }
     var ipError by remember { mutableStateOf<String?>(null) }
     var portError by remember { mutableStateOf<String?>(null) }
 
@@ -106,7 +108,7 @@ fun ServerConfigScreen(
                 // Server Address Field (renamed from IP Address)
                 Column {
                     Text(
-                        text = "Server Address",
+                        text = "Payment Server Address",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
@@ -136,7 +138,7 @@ fun ServerConfigScreen(
                 // Port Field
                 Column {
                     Text(
-                        text = "Port",
+                        text = "Payment Server Port",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
@@ -172,6 +174,30 @@ fun ServerConfigScreen(
                     }
                 }
 
+                // Ask portal URL (for remote log pull via /deviceHub)
+                Column {
+                    Text(
+                        text = "Ask Portal URL (remote logs)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = portalUrl,
+                        onValueChange = { portalUrl = it },
+                        placeholder = { Text("wss://askportal.example.com or host:port") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Text(
+                        text = "Optional. Device connects to /deviceHub so the portal can pull logs.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                    )
+                }
+
             }
         }
 
@@ -198,7 +224,7 @@ fun ServerConfigScreen(
             Button(
                 onClick = {
                     if (validateInputs()) {
-                        onSave(ipAddress.trim(), port.trim())
+                        onSave(ipAddress.trim(), port.trim(), portalUrl.trim())
                     }
                 },
                 modifier = Modifier.weight(if (isFirstTime) 2f else 1f)
@@ -210,7 +236,7 @@ fun ServerConfigScreen(
         if (isFirstTime) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "💡 Tip: Contact your administrator for the correct server details",
+                text = "Tip: Contact your administrator for the correct server details",
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),

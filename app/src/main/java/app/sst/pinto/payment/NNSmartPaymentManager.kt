@@ -5,7 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.util.Log
+import app.sst.pinto.utils.AppLog
+import app.sst.pinto.utils.WireLog
 import app.sst.pinto.utils.FileLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -83,7 +84,7 @@ object NNSmartPaymentManager {
         if (fileLogger != null) {
             fileLogger?.d(TAG, message)
         } else {
-            Log.d(TAG, message)
+            AppLog.d(TAG, message)
         }
     }
 
@@ -91,7 +92,7 @@ object NNSmartPaymentManager {
         if (fileLogger != null) {
             fileLogger?.w(TAG, message)
         } else {
-            Log.w(TAG, message)
+            AppLog.w(TAG, message)
         }
     }
 
@@ -99,7 +100,7 @@ object NNSmartPaymentManager {
         if (fileLogger != null) {
             fileLogger?.e(TAG, message, t)
         } else {
-            Log.e(TAG, message, t)
+            AppLog.e(TAG, message, t)
         }
     }
 
@@ -601,7 +602,7 @@ object NNSmartPaymentManager {
                                 }
                             }
                         }
-                        logDebug("Sending NNSmart broadcast: action=$action extras=$extras reply=$replyAction")
+                        WireLog.payRequest("NNSMART", "action=$action extras=$extras reply=$replyAction")
                         appContext.sendBroadcast(requestIntent)
                     } catch (e: Throwable) {
                         logError("Failed to send NNSmart broadcast", e)

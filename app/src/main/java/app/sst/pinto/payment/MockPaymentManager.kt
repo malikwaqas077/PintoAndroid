@@ -1,6 +1,6 @@
 package app.sst.pinto.payment
 
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,7 +27,7 @@ object MockPaymentManager {
         requesterRef: String,
         amountFormatted: String? = null
     ): CardCheckResult = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting mock card check: ref=$requesterRef, amount=$amountFormatted")
+        AppLog.d(TAG, "Starting mock card check: ref=$requesterRef, amount=$amountFormatted")
         
         // Simulate network delay (1-2 seconds)
         delay((1000..2000).random().toLong())
@@ -36,7 +36,7 @@ object MockPaymentManager {
         val mockToken = "MOCK_TOKEN_${UUID.randomUUID().toString().substring(0, 8).uppercase()}"
         val mockSequenceNumber = "${System.currentTimeMillis() % 100000}"
         
-        Log.d(TAG, "Mock card check completed: token=$mockToken, sequenceNumber=$mockSequenceNumber")
+        AppLog.d(TAG, "Mock card check completed: token=$mockToken, sequenceNumber=$mockSequenceNumber")
         
         CardCheckResult(
             success = true,
@@ -69,7 +69,7 @@ object MockPaymentManager {
         amountFormatted: String,
         requesterRef: String
     ): PlanetPaymentResult = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting mock sale: amount=$amountFormatted, ref=$requesterRef")
+        AppLog.d(TAG, "Starting mock sale: amount=$amountFormatted, ref=$requesterRef")
         
         // Simulate network delay (2-4 seconds)
         delay((2000..4000).random().toLong())
@@ -77,7 +77,7 @@ object MockPaymentManager {
         // Special case: amount 101.00 triggers daily limit exceeded error
         val amountValue = amountFormatted.toDoubleOrNull() ?: 0.0
         if (amountValue == 101.00) {
-            Log.d(TAG, "Mock sale: Daily limit exceeded for amount 101.00")
+            AppLog.d(TAG, "Mock sale: Daily limit exceeded for amount 101.00")
             return@withContext PlanetPaymentResult(
                 success = false,
                 resultCode = "D",
@@ -94,7 +94,7 @@ object MockPaymentManager {
         }
         
         // All other amounts succeed
-        Log.d(TAG, "Mock sale: Payment successful")
+        AppLog.d(TAG, "Mock sale: Payment successful")
         PlanetPaymentResult(
             success = true,
             resultCode = "A",
@@ -121,12 +121,12 @@ object MockPaymentManager {
         requesterRef: String,
         sequenceNumberToCancel: String?
     ): Boolean = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting mock cancel: ref=$requesterRef, sequenceNumber=$sequenceNumberToCancel")
+        AppLog.d(TAG, "Starting mock cancel: ref=$requesterRef, sequenceNumber=$sequenceNumberToCancel")
         
         // Simulate network delay (500ms - 1 second)
         delay((500..1000).random().toLong())
         
-        Log.d(TAG, "Mock cancel: Transaction cancelled successfully")
+        AppLog.d(TAG, "Mock cancel: Transaction cancelled successfully")
         true
     }
     
@@ -143,13 +143,13 @@ object MockPaymentManager {
         requesterRef: String,
         originalRequesterRef: String
     ): PlanetPaymentResult = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting mock sale reversal: amount=$amountFormatted, ref=$requesterRef, originalRef=$originalRequesterRef")
+        AppLog.d(TAG, "Starting mock sale reversal: amount=$amountFormatted, ref=$requesterRef, originalRef=$originalRequesterRef")
         
         // Simulate network delay (2-4 seconds)
         delay((2000..4000).random().toLong())
         
         // Mock reversals always succeed
-        Log.d(TAG, "Mock sale reversal: Reversal successful")
+        AppLog.d(TAG, "Mock sale reversal: Reversal successful")
         PlanetPaymentResult(
             success = true,
             resultCode = "A",
@@ -162,6 +162,61 @@ object MockPaymentManager {
                 "Message" to "REVERSAL_APPROVED",
                 "RequesterTransRefNum" to requesterRef,
                 "OriginalRequesterTransRefNum" to originalRequesterRef
+            )
+        )
+    }
+
+    /**
+     * Perform a mock ticket-redemption payout (refund of the bank-redeemable
+     * portion to the customer's card).
+     *
+     * Special behavior (mirrors the 101.00 sale rule):
+     * - Bank amount 66.00 returns a declined payout so the "ticket couldn't be
+     *   redeemed" path can be tested end to end
+     * - All other amounts return a successful payout response
+     *
+     * @param amountFormatted bank-redeemable amount as a string in the format "10.00"
+     * @param requesterRef unique reference for this redemption transaction
+     */
+    suspend fun performRedeem(
+        amountFormatted: String,
+        requesterRef: String
+    ): PlanetPaymentResult = withContext(Dispatchers.IO) {
+        AppLog.d(TAG, "Starting mock redeem payout: amount=$amountFormatted, ref=$requesterRef")
+
+        // Simulate terminal/network delay (2-4 seconds)
+        delay((2000..4000).random().toLong())
+
+        val amountValue = amountFormatted.toDoubleOrNull() ?: 0.0
+        if (amountValue == 66.00) {
+            AppLog.d(TAG, "Mock redeem: Payout declined for amount 66.00 (test trigger)")
+            return@withContext PlanetPaymentResult(
+                success = false,
+                resultCode = "D",
+                bankResultCode = "05",
+                message = "REDEEM_DECLINED",
+                requesterTransRefNum = requesterRef,
+                rawOptions = mapOf(
+                    "Result" to "D",
+                    "BankResultCode" to "05",
+                    "Message" to "REDEEM_DECLINED",
+                    "RequesterTransRefNum" to requesterRef
+                )
+            )
+        }
+
+        AppLog.d(TAG, "Mock redeem: Payout successful")
+        PlanetPaymentResult(
+            success = true,
+            resultCode = "A",
+            bankResultCode = "00",
+            message = "REDEEM_APPROVED",
+            requesterTransRefNum = requesterRef,
+            rawOptions = mapOf(
+                "Result" to "A",
+                "BankResultCode" to "00",
+                "Message" to "REDEEM_APPROVED",
+                "RequesterTransRefNum" to requesterRef
             )
         )
     }

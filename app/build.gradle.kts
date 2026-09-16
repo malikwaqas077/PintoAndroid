@@ -12,8 +12,8 @@ android {
         applicationId = "app.sst.pinto"
         minSdk = 25
         targetSdk = 34
-        versionCode = 6
-        versionName = "2.3"
+        versionCode = 7
+        versionName = "2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -60,6 +60,11 @@ android {
         jvmTarget = "1.8"
     }
 
+    testOptions {
+        // FileLogger unit tests touch android.util.Log; return defaults instead of throwing.
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         compose = true
     }
@@ -77,6 +82,11 @@ android {
 
 dependencies {
     implementation(files("libs/IntegrationSDK_release_1.0.10.aar"))
+    // CCV MAPI Android SDK (api-hardware embeds api-<ver>.jar, NeptuneLiteApi_*.jar
+    // and native libs). Drives on-device CCV terminals over OPI-NL (localhost:4100).
+    // Mirrors PayBridge's CcvAdapter. Drop a newer api-hardware-<ver>.aar into libs/
+    // and update this line to upgrade.
+    implementation(files("libs/api-hardware-1.34.aar"))
     // Add these to your existing dependencies block
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)

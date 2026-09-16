@@ -1,6 +1,6 @@
 package app.sst.pinto.payment
 
-import android.util.Log
+import app.sst.pinto.utils.AppLog
 import app.sst.pinto.utils.FileLogger
 import app.sst.pinto.utils.getDeviceIpAddress
 import integrate_clientsdk.CommunicationContext
@@ -63,7 +63,7 @@ object PlanetPaymentManager {
         if (fileLogger != null) {
             fileLogger?.d(TAG, message)
         } else {
-            Log.d(TAG, message)
+            AppLog.d(TAG, message)
         }
     }
 
@@ -72,7 +72,7 @@ object PlanetPaymentManager {
             fileLogger?.w(TAG, message)
             if (t != null) fileLogger?.e(TAG, "Warning throwable detail", t)
         } else {
-            Log.w(TAG, message, t)
+            AppLog.w(TAG, message, t)
         }
     }
 
@@ -80,7 +80,7 @@ object PlanetPaymentManager {
         if (fileLogger != null) {
             fileLogger?.e(TAG, message, t)
         } else {
-            Log.e(TAG, message, t)
+            AppLog.e(TAG, message, t)
         }
     }
 
@@ -145,7 +145,7 @@ object PlanetPaymentManager {
             synchronized(this) {
                 if (!loggerInitialized) {
                     try {
-                        Log.d(TAG, "Initializing Planet SDK logger (one-time initialization)")
+                        AppLog.d(TAG, "Initializing Planet SDK logger (one-time initialization)")
                         
                         // Try to load and initialize the Planet SDK logger
                         // On non-Planet devices, this may throw exceptions or cause native crashes
@@ -160,13 +160,13 @@ object PlanetPaymentManager {
                         
                         loggerInitialized = true
                         isSdkAvailable = true
-                        Log.d(TAG, "Planet logger initialized successfully")
+                        AppLog.d(TAG, "Planet logger initialized successfully")
                         return true
                     } catch (e: Throwable) {
                         // Catch Throwable (includes Error and native crashes), not just Exception
                         // This handles UnsatisfiedLinkError, NoClassDefFoundError, etc. that occur
                         // when native libraries are missing on non-Planet devices
-                        Log.w(TAG, "Planet SDK not available on this device: ${e.javaClass.simpleName}: ${e.message}")
+                        AppLog.w(TAG, "Planet SDK not available on this device: ${e.javaClass.simpleName}: ${e.message}")
                         
                         // Mark SDK as unavailable
                         isSdkAvailable = false
@@ -204,7 +204,7 @@ object PlanetPaymentManager {
                 val available = initializeLoggerOnce()
                 callback?.invoke(available)
             } catch (e: Throwable) {
-                Log.e(TAG, "Unexpected error during async logger initialization", e)
+                AppLog.e(TAG, "Unexpected error during async logger initialization", e)
                 isSdkAvailable = false
                 callback?.invoke(false)
             }
@@ -226,7 +226,7 @@ object PlanetPaymentManager {
         synchronized(this) {
             // Check if SDK is available before attempting initialization
             if (!isPlanetSdkAvailable()) {
-                Log.d(TAG, "Planet SDK is not available, skipping Integra initialization")
+                AppLog.d(TAG, "Planet SDK is not available, skipping Integra initialization")
                 return false
             }
             
@@ -235,15 +235,15 @@ object PlanetPaymentManager {
                 currentTerminalIp == terminalIp && 
                 currentTerminalPort == terminalPort &&
                 isConnected) {
-                Log.d(TAG, "Integra already initialized, skipping early initialization")
+                AppLog.d(TAG, "Integra already initialized, skipping early initialization")
                 return true
             }
             
-            Log.d(TAG, "Initializing Integra at app start: ip=$terminalIp, port=$terminalPort")
+            AppLog.d(TAG, "Initializing Integra at app start: ip=$terminalIp, port=$terminalPort")
             
             // Initialize logger first (required before any SDK operations)
             if (!initializeLoggerOnce()) {
-                Log.w(TAG, "Failed to initialize Planet SDK logger, cannot initialize Integra")
+                AppLog.w(TAG, "Failed to initialize Planet SDK logger, cannot initialize Integra")
                 return false
             }
             
@@ -252,15 +252,15 @@ object PlanetPaymentManager {
                 override fun onChannelEvent(channelEvent: ChannelEvent) {
                     when (channelEvent.type) {
                         ChannelEventType.CONNECTED -> {
-                            Log.d(TAG, "Planet channel connected during early initialization")
+                            AppLog.d(TAG, "Planet channel connected during early initialization")
                             isConnected = true
                         }
                         ChannelEventType.DISCONNECTED -> {
-                            Log.d(TAG, "Planet channel disconnected during early initialization")
+                            AppLog.d(TAG, "Planet channel disconnected during early initialization")
                             isConnected = false
                         }
                         else -> {
-                            Log.d(TAG, "Planet channel event: ${channelEvent.type}")
+                            AppLog.d(TAG, "Planet channel event: ${channelEvent.type}")
                         }
                     }
                 }
@@ -269,10 +269,10 @@ object PlanetPaymentManager {
             val integra = getOrCreateIntegra(terminalIp, terminalPort, channelStatusListener)
             
             if (integra != null) {
-                Log.d(TAG, "Integra initialized successfully at app start")
+                AppLog.d(TAG, "Integra initialized successfully at app start")
                 return true
             } else {
-                Log.w(TAG, "Failed to initialize Integra at app start, will initialize lazily on first transaction")
+                AppLog.w(TAG, "Failed to initialize Integra at app start, will initialize lazily on first transaction")
                 return false
             }
         }
@@ -292,11 +292,11 @@ object PlanetPaymentManager {
         timeoutSeconds: String = DEFAULT_TIMEOUT_SECONDS
     ): PlanetPaymentResult = transactionMutex.withLock {
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "Starting Planet sale: amount=$amountFormatted, ref=$requesterRef, ip=$terminalIp:$terminalPort")
+            AppLog.d(TAG, "Starting Planet sale: amount=$amountFormatted, ref=$requesterRef, ip=$terminalIp:$terminalPort")
 
             // Check if SDK is available before attempting any operations
             if (!isPlanetSdkAvailable()) {
-                Log.w(TAG, "Planet SDK is not available on this device, cannot perform sale")
+                AppLog.w(TAG, "Planet SDK is not available on this device, cannot perform sale")
                 return@withContext PlanetPaymentResult(
                     success = false,
                     resultCode = "SDK_UNAVAILABLE",
@@ -306,7 +306,7 @@ object PlanetPaymentManager {
 
             // Initialize logger once (should not be called on every transaction)
             if (!initializeLoggerOnce()) {
-                Log.w(TAG, "Failed to initialize Planet SDK logger, cannot perform sale")
+                AppLog.w(TAG, "Failed to initialize Planet SDK logger, cannot perform sale")
                 return@withContext PlanetPaymentResult(
                     success = false,
                     resultCode = "SDK_INIT_FAILED",
@@ -336,7 +336,7 @@ object PlanetPaymentManager {
                 override fun onStatusUpdate(statusUpdate: StatusUpdate) {
                     statusUpdate.options?.forEach { (key, value) ->
                         if (key == "StatusMessage") {
-                            Log.d(TAG, "Planet status: $value")
+                            AppLog.d(TAG, "Planet status: $value")
                             // Check for terminal ready states
                             val statusLower = value?.lowercase() ?: ""
                             if (statusLower.contains("terminal ready") || 
@@ -389,10 +389,10 @@ object PlanetPaymentManager {
                     // (Planet SDK sometimes calls onResponse with empty/null values as status updates)
                     if (hasResult || hasBankResult) {
                         state.transactionCompleted = true
-                        Log.d(TAG, "Planet response: result=${state.resultCode} bank=${state.bankResultCode} msg=${state.message} ref=${state.requesterTransRefNum}")
-                        Log.d(TAG, "Planet full response options: ${state.rawOptions}")
+                        AppLog.d(TAG, "Planet response: result=${state.resultCode} bank=${state.bankResultCode} msg=${state.message} ref=${state.requesterTransRefNum}")
+                        AppLog.d(TAG, "Planet full response options: ${state.rawOptions}")
                     } else {
-                        Log.d(TAG, "Planet response (ignored - no result data): options=${state.rawOptions}")
+                        AppLog.d(TAG, "Planet response (ignored - no result data): options=${state.rawOptions}")
                     }
                 }
             }
@@ -402,16 +402,16 @@ object PlanetPaymentManager {
                 override fun onChannelEvent(channelEvent: ChannelEvent) {
                     when (channelEvent.type) {
                         ChannelEventType.CONNECTED -> {
-                            Log.d(TAG, "Planet channel connected")
+                            AppLog.d(TAG, "Planet channel connected")
                             isConnected = true
                             connectedThisTransaction = true
                         }
                         ChannelEventType.DISCONNECTED -> {
-                            Log.d(TAG, "Planet channel disconnected")
+                            AppLog.d(TAG, "Planet channel disconnected")
                             isConnected = false
                         }
                         else -> {
-                            Log.d(TAG, "Planet channel event: ${channelEvent.type}")
+                            AppLog.d(TAG, "Planet channel event: ${channelEvent.type}")
                         }
                     }
                 }
@@ -422,7 +422,7 @@ object PlanetPaymentManager {
                 val integra = getOrCreateIntegra(terminalIp, terminalPort, channelStatusListener)
                 
                 if (integra == null) {
-                    Log.e(TAG, "Planet: failed to create or connect Integra instance")
+                    AppLog.e(TAG, "Planet: failed to create or connect Integra instance")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = "INIT_FAILED",
@@ -438,9 +438,9 @@ object PlanetPaymentManager {
                 // Note: Planet SDK connects automatically when sending the first request.
                 // We don't need to wait for connection here - sending the request will trigger connection.
                 if (isConnected) {
-                    Log.d(TAG, "Planet: using existing connection")
+                    AppLog.d(TAG, "Planet: using existing connection")
                 } else {
-                    Log.d(TAG, "Planet: connection will be established when sending request")
+                    AppLog.d(TAG, "Planet: connection will be established when sending request")
                 }
 
                 // Build sale request
@@ -449,11 +449,11 @@ object PlanetPaymentManager {
                     IRequest.TAG_AMOUNT to amountFormatted
                 )
 
-                Log.d(TAG, "Planet: creating SaleRequest with $requestOptions")
+                AppLog.d(TAG, "Planet: creating SaleRequest with $requestOptions")
                 val request: IRequest = SaleRequest(requestOptions)
 
                 if (!request.validateOptions()) {
-                    Log.e(TAG, "Planet: request validation failed")
+                    AppLog.e(TAG, "Planet: request validation failed")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = "INVALID_REQUEST",
@@ -463,10 +463,10 @@ object PlanetPaymentManager {
 
                 // Send request - this will trigger connection if not already connected
                 val sequenceNumber = AtomicInteger()
-                Log.d(TAG, "Planet: sending sale request")
+                AppLog.d(TAG, "Planet: sending sale request")
                 val sendError = integra.sendRequest(request, sequenceNumber)
                 if (sendError != ErrorType.SUCCESS) {
-                    Log.e(TAG, "Planet: error sending request: $sendError")
+                    AppLog.e(TAG, "Planet: error sending request: $sendError")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = sendError.toString(),
@@ -474,7 +474,7 @@ object PlanetPaymentManager {
                     )
                 }
 
-                Log.d(TAG, "Planet: request sent successfully, waiting for response")
+                AppLog.d(TAG, "Planet: request sent successfully, waiting for response")
 
                 // Wait for response
                 val txStart = System.currentTimeMillis()
@@ -484,7 +484,7 @@ object PlanetPaymentManager {
                 }
 
                 if (!state.transactionCompleted) {
-                    Log.e(TAG, "Planet: transaction timeout after ${System.currentTimeMillis() - txStart}ms")
+                    AppLog.e(TAG, "Planet: transaction timeout after ${System.currentTimeMillis() - txStart}ms")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = "TX_TIMEOUT",
@@ -494,7 +494,7 @@ object PlanetPaymentManager {
 
                 // Wait briefly for terminal to be ready (non-blocking, don't delay user feedback)
                 // Terminal ready is nice to have for next transaction, but shouldn't delay showing success
-                Log.d(TAG, "Planet: checking terminal ready status")
+                AppLog.d(TAG, "Planet: checking terminal ready status")
                 state.terminalReady = false
                 val readyStart = System.currentTimeMillis()
                 val readyTimeoutMs = 2_000L // Only wait 2 seconds max - don't delay user feedback
@@ -503,9 +503,9 @@ object PlanetPaymentManager {
                 }
                 
                 if (state.terminalReady) {
-                    Log.d(TAG, "Planet: terminal is ready")
+                    AppLog.d(TAG, "Planet: terminal is ready")
                 } else {
-                    Log.d(TAG, "Planet: terminal ready check completed (continuing - terminal will be ready for next transaction)")
+                    AppLog.d(TAG, "Planet: terminal ready check completed (continuing - terminal will be ready for next transaction)")
                 }
 
                 // Check for success: resultCode "A" = Approved, bankResultCode "00" = Success, or message contains "APPROVED"
@@ -515,7 +515,7 @@ object PlanetPaymentManager {
                         state.message?.contains("APPROVED", ignoreCase = true) == true
 
                
-                Log.d(TAG, "Planet: transaction completed with success=$success")
+                AppLog.d(TAG, "Planet: transaction completed with success=$success")
                 PlanetPaymentResult(
                     success = success,
                     resultCode = state.resultCode,
@@ -525,7 +525,7 @@ object PlanetPaymentManager {
                     rawOptions = state.rawOptions
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Planet: unexpected error during sale", e)
+                AppLog.e(TAG, "Planet: unexpected error during sale", e)
                 // If there's an error, mark connection as potentially broken
                 isConnected = false
                 PlanetPaymentResult(
@@ -546,10 +546,10 @@ object PlanetPaymentManager {
     private fun cleanupIntegraResources() {
         try {
             sharedIntegra?.dispose()
-            Log.d(TAG, "Planet: disposed Integra instance")
+            AppLog.d(TAG, "Planet: disposed Integra instance")
         } catch (e: Throwable) {
             // Handle case where SDK classes aren't available or already disposed
-            Log.w(TAG, "Planet: error disposing Integra instance (may not be available): ${e.javaClass.simpleName}: ${e.message}")
+            AppLog.w(TAG, "Planet: error disposing Integra instance (may not be available): ${e.javaClass.simpleName}: ${e.message}")
         } finally {
             sharedIntegra = null
             sharedChannel = null
@@ -567,7 +567,7 @@ object PlanetPaymentManager {
     fun cleanup() {
         synchronized(this) {
             cleanupIntegraResources()
-            Log.d(TAG, "Planet: all resources cleaned up")
+            AppLog.d(TAG, "Planet: all resources cleaned up")
         }
     }
     
@@ -589,7 +589,7 @@ object PlanetPaymentManager {
                                   !isConnected
             
             if (needsNewInstance) {
-                Log.d(TAG, "Planet: creating new Integra instance (first time or connection lost)")
+                AppLog.d(TAG, "Planet: creating new Integra instance (first time or connection lost)")
                 
                 // Clean up old instance if it exists (properly dispose resources)
                 cleanupIntegraResources()
@@ -605,7 +605,7 @@ object PlanetPaymentManager {
 
                     val channelError = ChannelFactory.validateOptions(channelOptions)
                     if (channelError != ErrorType.SUCCESS) {
-                        Log.e(TAG, "Planet channel options error: $channelError")
+                        AppLog.e(TAG, "Planet channel options error: $channelError")
                         return null
                     }
 
@@ -613,13 +613,13 @@ object PlanetPaymentManager {
                         ChannelFactory.getChannel(channelOptions)
                     } catch (e: Throwable) {
                         // Handle case where SDK classes aren't available (e.g., NoClassDefFoundError, UnsatisfiedLinkError)
-                        Log.w(TAG, "Failed to create Planet channel (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
+                        AppLog.w(TAG, "Failed to create Planet channel (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
                         isSdkAvailable = false
                         return null
                     }
                     
                     if (sharedChannel == null) {
-                        Log.e(TAG, "Planet: ChannelFactory.getChannel returned null")
+                        AppLog.e(TAG, "Planet: ChannelFactory.getChannel returned null")
                         return null
                     }
 
@@ -636,7 +636,7 @@ object PlanetPaymentManager {
 
                     val datalinkError = DatalinkFactory.validateOptions(datalinkOptions)
                     if (datalinkError != ErrorType.SUCCESS) {
-                        Log.e(TAG, "Planet datalink options error: $datalinkError")
+                        AppLog.e(TAG, "Planet datalink options error: $datalinkError")
                         return null
                     }
 
@@ -644,52 +644,52 @@ object PlanetPaymentManager {
                         DatalinkFactory.getDatalink(datalinkOptions)
                     } catch (e: Throwable) {
                         // Handle case where SDK classes aren't available
-                        Log.w(TAG, "Failed to create Planet datalink (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
+                        AppLog.w(TAG, "Failed to create Planet datalink (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
                         isSdkAvailable = false
                         return null
                     }
                     
                     if (sharedDatalink == null) {
-                        Log.e(TAG, "Planet: DatalinkFactory.getDatalink returned null")
+                        AppLog.e(TAG, "Planet: DatalinkFactory.getDatalink returned null")
                         return null
                     }
 
-                    Log.d(TAG, "Planet: creating CommunicationContext")
+                    AppLog.d(TAG, "Planet: creating CommunicationContext")
                     val context = try {
                         CommunicationContext(sharedChannel, sharedDatalink)
                     } catch (e: Throwable) {
                         // Handle case where SDK classes aren't available (e.g., NoClassDefFoundError, UnsatisfiedLinkError)
-                        Log.w(TAG, "Failed to create Planet CommunicationContext (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
+                        AppLog.w(TAG, "Failed to create Planet CommunicationContext (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
                         isSdkAvailable = false
                         return null
                     }
                     
                     if (context == null) {
-                        Log.e(TAG, "Planet: CommunicationContext constructor returned null")
+                        AppLog.e(TAG, "Planet: CommunicationContext constructor returned null")
                         return null
                     }
 
-                    Log.d(TAG, "Planet: creating Integra instance")
+                    AppLog.d(TAG, "Planet: creating Integra instance")
                     sharedIntegra = try {
                         Integra(context)
                     } catch (e: Throwable) {
                         // Handle case where SDK classes aren't available (e.g., NoClassDefFoundError, UnsatisfiedLinkError)
-                        Log.w(TAG, "Failed to create Planet Integra instance (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
+                        AppLog.w(TAG, "Failed to create Planet Integra instance (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}")
                         isSdkAvailable = false
                         return null
                     }
                     
                     if (sharedIntegra == null) {
-                        Log.e(TAG, "Planet: Integra constructor returned null")
+                        AppLog.e(TAG, "Planet: Integra constructor returned null")
                         return null
                     }
                     
                     // Set channel status listener (status and response handlers set per transaction)
-                    Log.d(TAG, "Planet: setting channel status listener")
+                    AppLog.d(TAG, "Planet: setting channel status listener")
                     try {
                         sharedIntegra?.setChannelStatusListener(channelStatusListener)
                     } catch (e: Exception) {
-                        Log.e(TAG, "Planet: error setting channel status listener", e)
+                        AppLog.e(TAG, "Planet: error setting channel status listener", e)
                         // Don't fail here, continue
                     }
                     
@@ -697,16 +697,16 @@ object PlanetPaymentManager {
                     currentTerminalPort = terminalPort
                     isConnected = false // Will be set to true by channelStatusListener
                     
-                    Log.d(TAG, "Planet: Integra instance created and handlers set")
+                    AppLog.d(TAG, "Planet: Integra instance created and handlers set")
                 } catch (e: Throwable) {
                     // Handle case where SDK classes aren't available (e.g., NoClassDefFoundError, UnsatisfiedLinkError)
-                    Log.w(TAG, "Planet: error creating Integra instance (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}", e)
+                    AppLog.w(TAG, "Planet: error creating Integra instance (SDK may not be available): ${e.javaClass.simpleName}: ${e.message}", e)
                     isSdkAvailable = false
                     cleanupIntegraResources()
                     return null
                 }
             } else {
-                Log.d(TAG, "Planet: reusing existing Integra instance")
+                AppLog.d(TAG, "Planet: reusing existing Integra instance")
             }
             
             return sharedIntegra
@@ -732,11 +732,11 @@ object PlanetPaymentManager {
         timeoutSeconds: String = DEFAULT_TIMEOUT_SECONDS
     ): CardCheckResult = transactionMutex.withLock {
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "Starting Planet card check: ref=$requesterRef, ip=$terminalIp:$terminalPort")
+            AppLog.d(TAG, "Starting Planet card check: ref=$requesterRef, ip=$terminalIp:$terminalPort")
 
             // Check if SDK is available before attempting any operations
             if (!isPlanetSdkAvailable()) {
-                Log.w(TAG, "Planet SDK is not available on this device, cannot perform card check")
+                AppLog.w(TAG, "Planet SDK is not available on this device, cannot perform card check")
                 return@withContext CardCheckResult(
                     success = false,
                     resultCode = "SDK_UNAVAILABLE",
@@ -746,7 +746,7 @@ object PlanetPaymentManager {
 
             // Initialize logger once (should not be called on every transaction)
             if (!initializeLoggerOnce()) {
-                Log.w(TAG, "Failed to initialize Planet SDK logger, cannot perform card check")
+                AppLog.w(TAG, "Failed to initialize Planet SDK logger, cannot perform card check")
                 return@withContext CardCheckResult(
                     success = false,
                     resultCode = "SDK_INIT_FAILED",
@@ -773,7 +773,7 @@ object PlanetPaymentManager {
                 override fun onStatusUpdate(statusUpdate: StatusUpdate) {
                     statusUpdate.options?.forEach { (key, value) ->
                         if (key == "StatusMessage") {
-                            Log.d(TAG, "Planet card check status: $value")
+                            AppLog.d(TAG, "Planet card check status: $value")
                             val statusLower = value?.lowercase() ?: ""
                             if (statusLower.contains("terminal ready") || 
                                 statusLower.contains("welcome") ||
@@ -808,25 +808,25 @@ object PlanetPaymentManager {
                             "Token" -> {
                                 if (value != null && value.isNotEmpty()) {
                                     state.token = value
-                                    Log.d(TAG, "Card check token received: $value")
+                                    AppLog.d(TAG, "Card check token received: $value")
                                 }
                             }
                             "CardToken" -> {
                                 if (value != null && value.isNotEmpty()) {
                                     state.token = value
-                                    Log.d(TAG, "Card check token received (CardToken): $value")
+                                    AppLog.d(TAG, "Card check token received (CardToken): $value")
                                 }
                             }
                             "CardDataToken" -> {
                                 if (value != null && value.isNotEmpty()) {
                                     state.token = value
-                                    Log.d(TAG, "Card check token received (CardDataToken): $value")
+                                    AppLog.d(TAG, "Card check token received (CardDataToken): $value")
                                 }
                             }
                             "SequenceNumber" -> {
                                 if (value != null && value.isNotEmpty()) {
                                     state.sequenceNumber = value
-                                    Log.d(TAG, "Card check sequence number received: $value")
+                                    AppLog.d(TAG, "Card check sequence number received: $value")
                                 }
                             }
                         }
@@ -834,10 +834,10 @@ object PlanetPaymentManager {
                     
                     if (hasResult) {
                         state.transactionCompleted = true
-                        Log.d(TAG, "Card check response: result=${state.resultCode} token=${state.token} msg=${state.message}")
-                        Log.d(TAG, "Card check full response options: ${state.rawOptions}")
+                        AppLog.d(TAG, "Card check response: result=${state.resultCode} token=${state.token} msg=${state.message}")
+                        AppLog.d(TAG, "Card check full response options: ${state.rawOptions}")
                     } else {
-                        Log.d(TAG, "Card check response (ignored - no result data): options=${state.rawOptions}")
+                        AppLog.d(TAG, "Card check response (ignored - no result data): options=${state.rawOptions}")
                     }
                 }
             }
@@ -847,16 +847,16 @@ object PlanetPaymentManager {
                 override fun onChannelEvent(channelEvent: ChannelEvent) {
                     when (channelEvent.type) {
                         ChannelEventType.CONNECTED -> {
-                            Log.d(TAG, "Planet channel connected for card check")
+                            AppLog.d(TAG, "Planet channel connected for card check")
                             isConnected = true
                             connectedThisTransaction = true
                         }
                         ChannelEventType.DISCONNECTED -> {
-                            Log.d(TAG, "Planet channel disconnected during card check")
+                            AppLog.d(TAG, "Planet channel disconnected during card check")
                             isConnected = false
                         }
                         else -> {
-                            Log.d(TAG, "Planet channel event: ${channelEvent.type}")
+                            AppLog.d(TAG, "Planet channel event: ${channelEvent.type}")
                         }
                     }
                 }
@@ -866,7 +866,7 @@ object PlanetPaymentManager {
                 val integra = getOrCreateIntegra(terminalIp, terminalPort, channelStatusListener)
                 
                 if (integra == null) {
-                    Log.e(TAG, "Planet: failed to create or connect Integra instance for card check")
+                    AppLog.e(TAG, "Planet: failed to create or connect Integra instance for card check")
                     return@withContext CardCheckResult(
                         success = false,
                         resultCode = "INIT_FAILED",
@@ -885,38 +885,38 @@ object PlanetPaymentManager {
                 // Add amount if provided (for fixed amount transactions)
                 if (amountFormatted != null && amountFormatted.isNotEmpty()) {
                     requestOptions[IRequest.TAG_AMOUNT] = amountFormatted
-                    Log.d(TAG, "Adding amount to CardCheckRequest: $amountFormatted")
+                    AppLog.d(TAG, "Adding amount to CardCheckRequest: $amountFormatted")
                 }
 
-                Log.d(TAG, "Planet: creating CardCheckRequest with $requestOptions")
+                AppLog.d(TAG, "Planet: creating CardCheckRequest with $requestOptions")
                 
                 // Log what options are required for debugging
                 // Wrap in try-catch as this SDK call might crash in native code
                 try {
                     val requiredOptions = RequestFactory.getOptionsForRequest("Card-Terminal")
-                    Log.d(TAG, "CardCheckRequest required options: $requiredOptions")
+                    AppLog.d(TAG, "CardCheckRequest required options: $requiredOptions")
                     
                     // If RequesterTransRefNum is required, add it
                     if (requiredOptions != null && (requiredOptions.contains("RequesterTransRefNum") || 
                         requiredOptions.contains(IRequest.TAG_REQUESTERTRANSREFNUM))) {
-                        Log.d(TAG, "Adding RequesterTransRefNum to CardCheckRequest")
+                        AppLog.d(TAG, "Adding RequesterTransRefNum to CardCheckRequest")
                         requestOptions[IRequest.TAG_REQUESTERTRANSREFNUM] = requesterRef
                     }
                 } catch (e: Throwable) {
                     // Catch Throwable (includes native crashes) not just Exception
-                    Log.w(TAG, "Could not get required options for CardCheckRequest, proceeding anyway", e)
+                    AppLog.w(TAG, "Could not get required options for CardCheckRequest, proceeding anyway", e)
                     // If getOptionsForRequest crashes, we'll still add RequesterTransRefNum below as safety measure
                 }
                 
                 // Add RequesterTransRefNum as a safety measure even if getOptionsForRequest failed
                 if (!requestOptions.containsKey(IRequest.TAG_REQUESTERTRANSREFNUM)) {
-                    Log.d(TAG, "Adding RequesterTransRefNum to CardCheckRequest as safety measure")
+                    AppLog.d(TAG, "Adding RequesterTransRefNum to CardCheckRequest as safety measure")
                     requestOptions[IRequest.TAG_REQUESTERTRANSREFNUM] = requesterRef
                 }
                 
                 // Validate requestOptions before creating request
                 if (requestOptions.isEmpty()) {
-                    Log.e(TAG, "Planet: requestOptions is empty, cannot create CardCheckRequest")
+                    AppLog.e(TAG, "Planet: requestOptions is empty, cannot create CardCheckRequest")
                     return@withContext CardCheckResult(
                         success = false,
                         resultCode = "INVALID_REQUEST",
@@ -927,7 +927,7 @@ object PlanetPaymentManager {
                 val request: IRequest = try {
                     RequestFactory.getRequest(requestOptions)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Planet: error creating CardCheckRequest from RequestFactory", e)
+                    AppLog.e(TAG, "Planet: error creating CardCheckRequest from RequestFactory", e)
                     return@withContext CardCheckResult(
                         success = false,
                         resultCode = "REQUEST_CREATION_FAILED",
@@ -936,7 +936,7 @@ object PlanetPaymentManager {
                 }
                 
                 if (request == null) {
-                    Log.e(TAG, "Planet: RequestFactory.getRequest returned null")
+                    AppLog.e(TAG, "Planet: RequestFactory.getRequest returned null")
                     return@withContext CardCheckResult(
                         success = false,
                         resultCode = "REQUEST_CREATION_FAILED",
@@ -945,7 +945,7 @@ object PlanetPaymentManager {
                 }
 
                 if (!request.validateOptions()) {
-                    Log.e(TAG, "Planet: card check request validation failed")
+                    AppLog.e(TAG, "Planet: card check request validation failed")
                     return@withContext CardCheckResult(
                         success = false,
                         resultCode = "INVALID_REQUEST",
@@ -955,10 +955,10 @@ object PlanetPaymentManager {
 
                 // Send request
                 val sequenceNumber = AtomicInteger()
-                Log.d(TAG, "Planet: sending card check request")
+                AppLog.d(TAG, "Planet: sending card check request")
                 val sendError = integra.sendRequest(request, sequenceNumber)
                 if (sendError != ErrorType.SUCCESS) {
-                    Log.e(TAG, "Planet: error sending card check request: $sendError")
+                    AppLog.e(TAG, "Planet: error sending card check request: $sendError")
                     return@withContext CardCheckResult(
                         success = false,
                         resultCode = sendError.toString(),
@@ -966,7 +966,7 @@ object PlanetPaymentManager {
                     )
                 }
 
-                Log.d(TAG, "Planet: card check request sent successfully, waiting for response")
+                AppLog.d(TAG, "Planet: card check request sent successfully, waiting for response")
 
                 // Wait for response
                 val txStart = System.currentTimeMillis()
@@ -976,7 +976,7 @@ object PlanetPaymentManager {
                 }
 
                 if (!state.transactionCompleted) {
-                    Log.e(TAG, "Planet: card check timeout after ${System.currentTimeMillis() - txStart}ms")
+                    AppLog.e(TAG, "Planet: card check timeout after ${System.currentTimeMillis() - txStart}ms")
                     return@withContext CardCheckResult(
                         success = false,
                         resultCode = "TX_TIMEOUT",
@@ -990,7 +990,7 @@ object PlanetPaymentManager {
                         state.message?.contains("APPROVED", ignoreCase = true) == true ||
                         state.message?.contains("SUCCESS", ignoreCase = true) == true
 
-                Log.d(TAG, "Planet: card check completed with success=$success, token=${state.token}, sequenceNumber=${state.sequenceNumber}")
+                AppLog.d(TAG, "Planet: card check completed with success=$success, token=${state.token}, sequenceNumber=${state.sequenceNumber}")
                 CardCheckResult(
                     success = success,
                     token = state.token,
@@ -1000,7 +1000,7 @@ object PlanetPaymentManager {
                     rawOptions = state.rawOptions
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Planet: unexpected error during card check", e)
+                AppLog.e(TAG, "Planet: unexpected error during card check", e)
                 isConnected = false
                 CardCheckResult(
                     success = false,
@@ -1030,17 +1030,17 @@ object PlanetPaymentManager {
         timeoutSeconds: String = DEFAULT_TIMEOUT_SECONDS
     ): Boolean = transactionMutex.withLock {
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "Starting Planet cancel: ref=$requesterRef, ip=$terminalIp:$terminalPort")
+            AppLog.d(TAG, "Starting Planet cancel: ref=$requesterRef, ip=$terminalIp:$terminalPort")
 
             // Check if SDK is available before attempting any operations
             if (!isPlanetSdkAvailable()) {
-                Log.w(TAG, "Planet SDK is not available on this device, cannot perform cancel")
+                AppLog.w(TAG, "Planet SDK is not available on this device, cannot perform cancel")
                 return@withContext false
             }
 
             // Initialize logger once (should not be called on every transaction)
             if (!initializeLoggerOnce()) {
-                Log.w(TAG, "Failed to initialize Planet SDK logger, cannot perform cancel")
+                AppLog.w(TAG, "Failed to initialize Planet SDK logger, cannot perform cancel")
                 return@withContext false
             }
 
@@ -1058,7 +1058,7 @@ object PlanetPaymentManager {
             val responseHandler = object : IResponseHandler {
                 override fun onResponse(response: Response) {
                     state.rawOptions = response.options ?: emptyMap()
-                    Log.d(TAG, "Cancel response received with options: ${state.rawOptions}")
+                    AppLog.d(TAG, "Cancel response received with options: ${state.rawOptions}")
                     
                     var hasResult = false
                     var hasType = false
@@ -1069,7 +1069,7 @@ object PlanetPaymentManager {
                                 if (value != null && value.isNotEmpty()) {
                                     hasType = true
                                     state.transactionCompleted = true
-                                    Log.d(TAG, "Cancel response received: Type=$value")
+                                    AppLog.d(TAG, "Cancel response received: Type=$value")
                                 }
                             }
                             "Result" -> {
@@ -1091,7 +1091,7 @@ object PlanetPaymentManager {
                     // Mark as completed if we have any meaningful response
                     if (hasType || hasResult || response.options?.isNotEmpty() == true) {
                         state.transactionCompleted = true
-                        Log.d(TAG, "Cancel response: result=${state.resultCode} msg=${state.message} type=${response.options?.get("Type")}")
+                        AppLog.d(TAG, "Cancel response: result=${state.resultCode} msg=${state.message} type=${response.options?.get("Type")}")
                     }
                 }
             }
@@ -1101,13 +1101,13 @@ object PlanetPaymentManager {
                 override fun onChannelEvent(channelEvent: ChannelEvent) {
                     when (channelEvent.type) {
                         ChannelEventType.CONNECTED -> {
-                            Log.d(TAG, "Planet channel connected for cancel")
+                            AppLog.d(TAG, "Planet channel connected for cancel")
                         }
                         ChannelEventType.DISCONNECTED -> {
-                            Log.d(TAG, "Planet channel disconnected during cancel")
+                            AppLog.d(TAG, "Planet channel disconnected during cancel")
                         }
                         else -> {
-                            Log.d(TAG, "Planet channel event: ${channelEvent.type}")
+                            AppLog.d(TAG, "Planet channel event: ${channelEvent.type}")
                         }
                     }
                 }
@@ -1117,7 +1117,7 @@ object PlanetPaymentManager {
                 val integra = getOrCreateIntegra(terminalIp, terminalPort, channelStatusListener)
                 
                 if (integra == null) {
-                    Log.e(TAG, "Planet: failed to create or connect Integra instance for cancel")
+                    AppLog.e(TAG, "Planet: failed to create or connect Integra instance for cancel")
                     return@withContext false
                 }
                 
@@ -1132,12 +1132,12 @@ object PlanetPaymentManager {
                 var requiredOptions: List<String>? = null
                 try {
                     requiredOptions = RequestFactory.getOptionsForRequest("Cancel")
-                    Log.d(TAG, "CancelRequest required options: $requiredOptions")
+                    AppLog.d(TAG, "CancelRequest required options: $requiredOptions")
                     
                     // Add RequesterTransRefNum if required
                     if (requiredOptions.contains("RequesterTransRefNum") || 
                         requiredOptions.contains(IRequest.TAG_REQUESTERTRANSREFNUM)) {
-                        Log.d(TAG, "Adding RequesterTransRefNum to CancelRequest")
+                        AppLog.d(TAG, "Adding RequesterTransRefNum to CancelRequest")
                         requestOptions[IRequest.TAG_REQUESTERTRANSREFNUM] = requesterRef
                     }
                     
@@ -1145,37 +1145,37 @@ object PlanetPaymentManager {
                     if (requiredOptions.contains("SequenceNumberToCancel") || 
                         requiredOptions.contains(IRequest.TAG_SEQUENCENUMBERTOCANCEL)) {
                         if (sequenceNumberToCancel != null && sequenceNumberToCancel.isNotEmpty()) {
-                            Log.d(TAG, "Adding SequenceNumberToCancel to CancelRequest: $sequenceNumberToCancel")
+                            AppLog.d(TAG, "Adding SequenceNumberToCancel to CancelRequest: $sequenceNumberToCancel")
                             requestOptions[IRequest.TAG_SEQUENCENUMBERTOCANCEL] = sequenceNumberToCancel
                         } else {
-                            Log.w(TAG, "CancelRequest requires SequenceNumberToCancel but it was not provided")
+                            AppLog.w(TAG, "CancelRequest requires SequenceNumberToCancel but it was not provided")
                         }
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Could not get required options for CancelRequest: ${e.message}", e)
+                    AppLog.w(TAG, "Could not get required options for CancelRequest: ${e.message}", e)
                 }
 
-                Log.d(TAG, "Planet: creating CancelRequest with $requestOptions")
+                AppLog.d(TAG, "Planet: creating CancelRequest with $requestOptions")
                 
                 val request: IRequest = RequestFactory.getRequest(requestOptions)
 
                 if (!request.validateOptions()) {
-                    Log.e(TAG, "Planet: cancel request validation failed!")
-                    Log.w(TAG, "Continuing with cancel request despite validation failure - will attempt to send anyway")
+                    AppLog.e(TAG, "Planet: cancel request validation failed!")
+                    AppLog.w(TAG, "Continuing with cancel request despite validation failure - will attempt to send anyway")
                 } else {
-                    Log.d(TAG, "Cancel request validation passed")
+                    AppLog.d(TAG, "Cancel request validation passed")
                 }
 
                 // Send request
                 val sequenceNumber = AtomicInteger()
-                Log.d(TAG, "Planet: sending cancel request")
+                AppLog.d(TAG, "Planet: sending cancel request")
                 val sendError = integra.sendRequest(request, sequenceNumber)
                 if (sendError != ErrorType.SUCCESS) {
-                    Log.e(TAG, "Planet: error sending cancel request: $sendError")
+                    AppLog.e(TAG, "Planet: error sending cancel request: $sendError")
                     return@withContext false
                 }
 
-                Log.d(TAG, "Planet: cancel request sent successfully, waiting for response")
+                AppLog.d(TAG, "Planet: cancel request sent successfully, waiting for response")
 
                 // Wait for response (shorter timeout for cancel)
                 val txStart = System.currentTimeMillis()
@@ -1185,10 +1185,10 @@ object PlanetPaymentManager {
                 }
 
                 if (!state.transactionCompleted) {
-                    Log.w(TAG, "Planet: cancel timeout after ${System.currentTimeMillis() - txStart}ms")
+                    AppLog.w(TAG, "Planet: cancel timeout after ${System.currentTimeMillis() - txStart}ms")
                     // If we sent the request successfully, consider it a success even without response
                     // The terminal may have processed the cancel even if it didn't send a response
-                    Log.d(TAG, "Cancel request was sent successfully, considering cancel as processed")
+                    AppLog.d(TAG, "Cancel request was sent successfully, considering cancel as processed")
                     return@withContext true
                 }
 
@@ -1204,10 +1204,10 @@ object PlanetPaymentManager {
                 // Even if the message doesn't explicitly say "success", the terminal received and processed the cancel
                 val success = state.transactionCompleted && (hasSuccessMessage || hasSuccessResult || state.rawOptions.isNotEmpty())
 
-                Log.d(TAG, "Planet: cancel completed with success=$success (result=${state.resultCode}, msg=${state.message}, hasResponse=${state.transactionCompleted})")
+                AppLog.d(TAG, "Planet: cancel completed with success=$success (result=${state.resultCode}, msg=${state.message}, hasResponse=${state.transactionCompleted})")
                 success
             } catch (e: Exception) {
-                Log.e(TAG, "Planet: unexpected error during cancel", e)
+                AppLog.e(TAG, "Planet: unexpected error during cancel", e)
                 false
             }
         }
@@ -1233,11 +1233,11 @@ object PlanetPaymentManager {
         timeoutSeconds: String = DEFAULT_TIMEOUT_SECONDS
     ): PlanetPaymentResult = transactionMutex.withLock {
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "Starting Planet sale reversal: amount=$amountFormatted, ref=$requesterRef, originalRef=$originalRequesterRef, ip=$terminalIp:$terminalPort")
+            AppLog.d(TAG, "Starting Planet sale reversal: amount=$amountFormatted, ref=$requesterRef, originalRef=$originalRequesterRef, ip=$terminalIp:$terminalPort")
 
             // Check if SDK is available before attempting any operations
             if (!isPlanetSdkAvailable()) {
-                Log.w(TAG, "Planet SDK is not available on this device, cannot perform sale reversal")
+                AppLog.w(TAG, "Planet SDK is not available on this device, cannot perform sale reversal")
                 return@withContext PlanetPaymentResult(
                     success = false,
                     resultCode = "SDK_UNAVAILABLE",
@@ -1247,7 +1247,7 @@ object PlanetPaymentManager {
 
             // Initialize logger once (should not be called on every transaction)
             if (!initializeLoggerOnce()) {
-                Log.w(TAG, "Failed to initialize Planet SDK logger, cannot perform sale reversal")
+                AppLog.w(TAG, "Failed to initialize Planet SDK logger, cannot perform sale reversal")
                 return@withContext PlanetPaymentResult(
                     success = false,
                     resultCode = "SDK_INIT_FAILED",
@@ -1274,7 +1274,7 @@ object PlanetPaymentManager {
                 override fun onStatusUpdate(statusUpdate: StatusUpdate) {
                     statusUpdate.options?.forEach { (key, value) ->
                         if (key == "StatusMessage") {
-                            Log.d(TAG, "Planet reversal status: $value")
+                            AppLog.d(TAG, "Planet reversal status: $value")
                             val statusLower = value?.lowercase() ?: ""
                             if (statusLower.contains("terminal ready") || 
                                 statusLower.contains("welcome") ||
@@ -1323,10 +1323,10 @@ object PlanetPaymentManager {
                     
                     if (hasResult || hasBankResult) {
                         state.transactionCompleted = true
-                        Log.d(TAG, "Planet reversal response: result=${state.resultCode} bank=${state.bankResultCode} msg=${state.message} ref=${state.requesterTransRefNum}")
-                        Log.d(TAG, "Planet reversal full response options: ${state.rawOptions}")
+                        AppLog.d(TAG, "Planet reversal response: result=${state.resultCode} bank=${state.bankResultCode} msg=${state.message} ref=${state.requesterTransRefNum}")
+                        AppLog.d(TAG, "Planet reversal full response options: ${state.rawOptions}")
                     } else {
-                        Log.d(TAG, "Planet reversal response (ignored - no result data): options=${state.rawOptions}")
+                        AppLog.d(TAG, "Planet reversal response (ignored - no result data): options=${state.rawOptions}")
                     }
                 }
             }
@@ -1336,16 +1336,16 @@ object PlanetPaymentManager {
                 override fun onChannelEvent(channelEvent: ChannelEvent) {
                     when (channelEvent.type) {
                         ChannelEventType.CONNECTED -> {
-                            Log.d(TAG, "Planet channel connected for reversal")
+                            AppLog.d(TAG, "Planet channel connected for reversal")
                             isConnected = true
                             connectedThisTransaction = true
                         }
                         ChannelEventType.DISCONNECTED -> {
-                            Log.d(TAG, "Planet channel disconnected during reversal")
+                            AppLog.d(TAG, "Planet channel disconnected during reversal")
                             isConnected = false
                         }
                         else -> {
-                            Log.d(TAG, "Planet channel event: ${channelEvent.type}")
+                            AppLog.d(TAG, "Planet channel event: ${channelEvent.type}")
                         }
                     }
                 }
@@ -1355,7 +1355,7 @@ object PlanetPaymentManager {
                 val integra = getOrCreateIntegra(terminalIp, terminalPort, channelStatusListener)
                 
                 if (integra == null) {
-                    Log.e(TAG, "Planet: failed to create or connect Integra instance for reversal")
+                    AppLog.e(TAG, "Planet: failed to create or connect Integra instance for reversal")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = "INIT_FAILED",
@@ -1376,13 +1376,13 @@ object PlanetPaymentManager {
                     IRequest.TAG_AMOUNT to amountFormatted
                 )
                 
-                Log.d(TAG, "Using original RequesterTransRefNum ($originalRequesterRef) to identify transaction for reversal")
+                AppLog.d(TAG, "Using original RequesterTransRefNum ($originalRequesterRef) to identify transaction for reversal")
 
                 // Try to add original transaction reference using various possible tag names
                 // The Planet SDK might need this to identify which transaction to reverse
                 try {
                     val requiredOptions = RequestFactory.getOptionsForRequest("Sale-Reversal")
-                    Log.d(TAG, "SaleReversalRequest required options: $requiredOptions")
+                    AppLog.d(TAG, "SaleReversalRequest required options: $requiredOptions")
                     
                     // Try different tag names that might be used for original transaction reference
                     val possibleTags = listOf(
@@ -1397,7 +1397,7 @@ object PlanetPaymentManager {
                     for (tag in possibleTags) {
                         if (requiredOptions.contains(tag)) {
                             requestOptions[tag] = originalRequesterRef
-                            Log.d(TAG, "Adding $tag: $originalRequesterRef")
+                            AppLog.d(TAG, "Adding $tag: $originalRequesterRef")
                             break // Only add one
                         }
                     }
@@ -1407,20 +1407,20 @@ object PlanetPaymentManager {
                         !requestOptions.containsKey(IRequest.TAG_ORIGINALREQUESTID)) {
                         // Try adding as optional parameter
                         requestOptions["OriginalRequesterTransRefNum"] = originalRequesterRef
-                        Log.d(TAG, "Adding OriginalRequesterTransRefNum as optional parameter: $originalRequesterRef")
+                        AppLog.d(TAG, "Adding OriginalRequesterTransRefNum as optional parameter: $originalRequesterRef")
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Could not get required options for SaleReversalRequest, adding OriginalRequesterTransRefNum anyway", e)
+                    AppLog.w(TAG, "Could not get required options for SaleReversalRequest, adding OriginalRequesterTransRefNum anyway", e)
                     // Still try to add it as it might be needed
                     requestOptions["OriginalRequesterTransRefNum"] = originalRequesterRef
-                    Log.d(TAG, "Added OriginalRequesterTransRefNum: $originalRequesterRef")
+                    AppLog.d(TAG, "Added OriginalRequesterTransRefNum: $originalRequesterRef")
                 }
 
-                Log.d(TAG, "Planet: creating SaleReversalRequest with $requestOptions")
+                AppLog.d(TAG, "Planet: creating SaleReversalRequest with $requestOptions")
                 val request: IRequest = SaleReversalRequest(requestOptions)
 
                 if (!request.validateOptions()) {
-                    Log.e(TAG, "Planet: reversal request validation failed")
+                    AppLog.e(TAG, "Planet: reversal request validation failed")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = "INVALID_REQUEST",
@@ -1430,10 +1430,10 @@ object PlanetPaymentManager {
 
                 // Send request
                 val sequenceNumber = AtomicInteger()
-                Log.d(TAG, "Planet: sending sale reversal request")
+                AppLog.d(TAG, "Planet: sending sale reversal request")
                 val sendError = integra.sendRequest(request, sequenceNumber)
                 if (sendError != ErrorType.SUCCESS) {
-                    Log.e(TAG, "Planet: error sending reversal request: $sendError")
+                    AppLog.e(TAG, "Planet: error sending reversal request: $sendError")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = sendError.toString(),
@@ -1441,7 +1441,7 @@ object PlanetPaymentManager {
                     )
                 }
 
-                Log.d(TAG, "Planet: reversal request sent successfully, waiting for response")
+                AppLog.d(TAG, "Planet: reversal request sent successfully, waiting for response")
 
                 // Wait for response
                 val txStart = System.currentTimeMillis()
@@ -1451,7 +1451,7 @@ object PlanetPaymentManager {
                 }
 
                 if (!state.transactionCompleted) {
-                    Log.e(TAG, "Planet: reversal timeout after ${System.currentTimeMillis() - txStart}ms")
+                    AppLog.e(TAG, "Planet: reversal timeout after ${System.currentTimeMillis() - txStart}ms")
                     return@withContext PlanetPaymentResult(
                         success = false,
                         resultCode = "TX_TIMEOUT",
@@ -1465,7 +1465,7 @@ object PlanetPaymentManager {
                         state.bankResultCode?.equals("00", ignoreCase = true) == true ||
                         state.message?.contains("APPROVED", ignoreCase = true) == true
 
-                Log.d(TAG, "Planet: reversal completed with success=$success")
+                AppLog.d(TAG, "Planet: reversal completed with success=$success")
                 PlanetPaymentResult(
                     success = success,
                     resultCode = state.resultCode,
@@ -1475,7 +1475,7 @@ object PlanetPaymentManager {
                     rawOptions = state.rawOptions
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Planet: unexpected error during reversal", e)
+                AppLog.e(TAG, "Planet: unexpected error during reversal", e)
                 isConnected = false
                 PlanetPaymentResult(
                     success = false,

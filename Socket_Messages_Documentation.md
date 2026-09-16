@@ -31,7 +31,7 @@ All messages follow this standard JSON structure:
 
 ```json
 {
-    "messageType": "[SCREEN_CHANGE | USER_ACTION | ERROR | STATUS_UPDATE | DEVICE_INFO | RESTART_APP | CARD_CHECK_RESULT | PAYMENT_RESULT | LIMIT_CHECK_RESULT | REFUND_REQUEST | REVERSAL_REQUEST | REVERSAL_RESULT]",
+    "messageType": "[SCREEN_CHANGE | USER_ACTION | ERROR | STATUS_UPDATE | DEVICE_INFO | RESTART_APP | CARD_CHECK_RESULT | PAYMENT_RESULT | LIMIT_CHECK_RESULT | REFUND_REQUEST | REVERSAL_REQUEST | REVERSAL_RESULT | REDEEM_REQUEST | REDEEM_BREAKDOWN | REDEEM_RESULT]",
     "screen": "[SCREEN_IDENTIFIER]",
     "data": {
         // Optional data specific to the screen or action
@@ -75,6 +75,13 @@ The `data` object can contain the following fields (all optional, depending on m
     - `"LIMIT_REVERSAL_FAILED"`: Daily limit rejected after sale; client attempted reversal but terminal reversal failed/timed out (reported via `REVERSAL_RESULT`)
 - `paymentUrl`: String - URL for QR code payment
 
+**Ticket Redemption:**
+- `ticketId`: String - Identifier of the ticket being redeemed (may be known from the barcode/scan at request time)
+- `bankRedeemAmount`: Int - Portion payable to the customer's bank card (card spend + winnings). Only on `REDEEM_BREAKDOWN` / `REDEEM_RESULT` — not available at `REDEEM_REQUEST` time
+- `cashRedeemAmount`: Int - Portion that must be collected in cash at the cashier desk (cash spend - AML rule). Only on `REDEEM_BREAKDOWN` / `REDEEM_RESULT`
+- `totalRedeemAmount`: Int - Total ticket value (`bankRedeemAmount + cashRedeemAmount`). Only on `REDEEM_BREAKDOWN` (and optionally echoed on `REDEEM_RESULT`) — unknown until the scanner/back office returns ticket details after scan
+- `currency`: String - Currency symbol for the redemption amounts. Sent with `REDEEM_BREAKDOWN` once ticket details are known; not required on `REDEEM_REQUEST`
+
 **Device Information:**
 - `deviceIpAddress`: String - Device's local IPv4 address
 - `deviceSerialNumber`: String - Device's serial number
@@ -104,6 +111,9 @@ The `data` object can contain the following fields (all optional, depending on m
 - **LIMIT_CHECK_RESULT**: Server responds to card check with limit validation result (APPROVED/REJECTED)
 - **REFUND_REQUEST** / **REVERSAL_REQUEST**: Server requests client to refund/reverse a previously successful sale transaction
 - **REVERSAL_RESULT**: Client sends refund/reversal result back to server
+- **REDEEM_REQUEST**: Server initiates a ticket redemption on the device (ticket presented/scanned; amount and currency not yet known)
+- **REDEEM_BREAKDOWN**: Server sends ticket value, currency, and bank/cash split after scanner/back-office lookup
+- **REDEEM_RESULT**: Redemption outcome. The server may send this when redemption runs in the background (device is display-only). The client may also send it for local payout / refusal cases (DEVICE_BUSY, BREAKDOWN_TIMEOUT, etc.)
 
 
 ## Screen Identifier Values
@@ -131,6 +141,9 @@ The `data` object can contain the following fields (all optional, depending on m
 - **CANCEL**: Client cancels current transaction
 - **RECEIPT_RESPONSE**: Client responds to receipt question (YES/NO)
 - **MOCK_PAYMENT_CARD**: Mock payment card screen (shown for mock payment provider only)
+- **REDEEM_INITIATED**: Ticket redemption started; verifying ticket (client-controlled)
+- **REDEEM_CONFIRM**: Bank/cash breakdown shown; customer chooses Continue or Cancel (client-controlled)
+- **REDEEM_RESPONSE**: Client responds to the redemption confirmation (CONTINUE/CANCEL/TIMEOUT)
 
 
 ## Client vs Server Controlled Screens
@@ -1257,7 +1270,286 @@ Or if reversal failed:
 - **All refund screens are client-controlled** - server only sends REVERSAL_REQUEST, Android app handles the rest
 - **Server does NOT send THANK_YOU when refund is triggered** - Android app manages the complete refund flow
 
-## 15. App Restart Message
+## 15. Ticket Redemption (Redeem to Bank Account)
+
+The server can ask the device to redeem a winning ticket back to the customer's
+bank account. Because the card identifier (`cardToken` / PAR / panHash) is sent
+to the backend with every card payment (see `CARD_CHECK_RESULT`), the backend
+knows how much of a ticket was funded by card and how much by cash.
+
+**Anti-money-laundering rule:** only the amount the customer spent **by card,
+plus any winnings**, may be sent back to the bank. The amount originally paid
+**in cash** must be paid out in cash — it is printed as a separate cash ticket
+the customer takes to the cashier desk.
+
+**No card spend = no bank redemption:** if the customer paid nothing by card
+there is no card/bank account to send funds back to, so the entire ticket
+(including winnings) stays cash-only (`bankRedeemAmount = 0`). The flow still
+runs so the CUSTOMER is informed on the device: the client skips the
+Continue/Cancel screen, shows a "ticket not redeemable to bank" message
+directing them to the cashier desk (their existing ticket remains valid for
+cash), and replies `REDEEM_RESULT` / `FAILED` / `NOTHING_TO_REDEEM`.
+
+> Example: customer spends £100 by card and £50 in cash, and the ticket is
+> worth £200 (a £50 net win). Bank portion = £100 card + £50 winnings = **£150**;
+> cash portion = **£50**, printed as a cash ticket for the cashier desk.
+
+### 15.1 Server Initiates Redemption — REDEEM_REQUEST
+
+Sent as soon as a redeemable ticket is presented/scanned and the server wants
+the device to enter the redemption flow. At this point the ticket **amount and
+currency are not yet known** — those come from the scanner/back office and are
+delivered later in `REDEEM_BREAKDOWN`. `REDEEM_REQUEST` only needs enough to
+correlate the flow and show the "verifying" UI.
+
+```json
+{
+    "messageType": "REDEEM_REQUEST",
+    "screen": "REDEEM_INITIATED",
+    "data": {
+        "ticketId": "TKT-12345"
+    },
+    "transactionId": "REDEEM_1765208631832",
+    "timestamp": 1765208631832
+}
+```
+
+**Message Details:**
+- **data.ticketId**: Ticket identifier from the barcode/scan when available.
+  Optional if the id is only resolved after back-office lookup (it can then
+  arrive on `REDEEM_BREAKDOWN`).
+- **Do not include** `totalRedeemAmount`, `bankRedeemAmount`, `cashRedeemAmount`,
+  or `currency` here — they are unknown until the ticket has been verified and
+  details returned from the scanner/back office.
+
+**Client Behavior:**
+- If a payment or another redemption is already in progress, the client
+  immediately replies with `REDEEM_RESULT` / `FAILED` / `errorCode: "DEVICE_BUSY"`
+  and does not change the screen.
+- Otherwise the client dismisses the screensaver (if visible) and shows the
+  **REDEEM_INITIATED** screen ("Verifying your ticket...") locally. No amount
+  is displayed on this screen.
+- If `REDEEM_BREAKDOWN` does not arrive within **30 seconds**, the client sends
+  `REDEEM_RESULT` / `FAILED` / `errorCode: "BREAKDOWN_TIMEOUT"` and returns to
+  the main screen. The ticket remains valid.
+
+### 15.2 Server Sends the Split — REDEEM_BREAKDOWN
+
+Sent **after** the ticket has been scanned/verified and the scanner/back office
+has returned the ticket value and funding split. This is the first message that
+carries `totalRedeemAmount`, `currency`, and the bank/cash amounts.
+
+```json
+{
+    "messageType": "REDEEM_BREAKDOWN",
+    "screen": "REDEEM_CONFIRM",
+    "data": {
+        "ticketId": "TKT-12345",
+        "bankRedeemAmount": 150,
+        "cashRedeemAmount": 50,
+        "totalRedeemAmount": 200,
+        "currency": "£"
+    },
+    "transactionId": "REDEEM_1765208631832",
+    "timestamp": 1765208632500
+}
+```
+
+**Message Details:**
+- **data.totalRedeemAmount**: Full ticket value from back office (pence/cents as Int)
+- **data.currency**: Currency symbol for display (e.g. `"£"`)
+- **data.bankRedeemAmount** / **data.cashRedeemAmount**: AML split (see intro above)
+- **data.ticketId**: Echoed (or supplied here if it was not on `REDEEM_REQUEST`)
+
+**Client Behavior:**
+- Validates the breakdown (`bankRedeemAmount >= 0`, `cashRedeemAmount >= 0`,
+  `bankRedeemAmount + cashRedeemAmount == totalRedeemAmount > 0`). An invalid
+  breakdown produces `REDEEM_RESULT` / `FAILED` / `errorCode: "INVALID_BREAKDOWN"`.
+- If `bankRedeemAmount` is `0` (ticket paid fully in cash) the client does NOT
+  show the Continue/Cancel screen. Instead it shows a **"TICKET NOT REDEEMABLE"**
+  screen telling the customer their existing ticket is still valid and to take
+  it to the cashier desk for cash (printing a replacement cash ticket would be
+  pointless), replies `REDEEM_RESULT` / `FAILED` / `errorCode: "NOTHING_TO_REDEEM"`
+  so the backend keeps the ticket valid, and returns to the main screen.
+- Shows the **REDEEM_CONFIRM** screen with the bank/cash split and
+  **CONTINUE** / **CANCEL** buttons.
+- If `cashRedeemAmount` is `0` (fully card-funded ticket), nothing about cash
+  or the cashier desk is shown anywhere in the flow: the confirmation screen
+  shows only the bank amount, the success screen omits the cash-ticket
+  instructions, and the server skips the cash-ticket `PRINT_TICKET` step.
+- If the customer does not answer within **60 seconds**, the client auto-cancels
+  (selectionMethod `TIMEOUT`) and the ticket remains valid.
+- Uses the same `transactionId` as the `REDEEM_REQUEST` for correlation. If the
+  app restarted between the two messages, the client adopts the breakdown and
+  continues (tolerant behaviour).
+
+### 15.3 Customer Decision — USER_ACTION / REDEEM_RESPONSE
+
+```json
+{
+    "messageType": "USER_ACTION",
+    "screen": "REDEEM_RESPONSE",
+    "data": {
+        "selectionMethod": "CONTINUE",
+        "ticketId": "TKT-12345"
+    },
+    "transactionId": "REDEEM_1765208631832",
+    "timestamp": 1765208640000
+}
+```
+
+`selectionMethod` values:
+- **CONTINUE** — customer accepted. Client shows RedeemProcessing and waits for
+  server `REDEEM_RESULT` (backend performs the redemption). Client does **not**
+  decide success/failure or send `REDEEM_RESULT` on CONTINUE.
+- **CANCEL** — customer cancelled. The client shows a "Redemption cancelled —
+  your ticket has NOT been redeemed" message for a few seconds and returns to
+  the main screen. No `REDEEM_RESULT` follows; the server must keep the ticket
+  valid.
+- **TIMEOUT** — no answer within 60 seconds; treated like CANCEL
+  (`data.errorMessage` = "Redemption confirmation timed out").
+
+### 15.4 Bank Payout (server-side)
+
+On CONTINUE the client shows **RedeemProcessing** and waits. The **server**
+performs ticket redemption in the background and then sends `REDEEM_RESULT`
+(`SUCCESS` or `FAILED`). The device only displays the outcome.
+
+Legacy local payout paths (mock / CCV refund / NNSmart refuse) are no longer
+used on CONTINUE — the backend is the source of truth for redeem outcome.
+
+### 15.5 Redemption Outcome — REDEEM_RESULT
+
+**Server-driven (preferred when redemption runs in the backend):** the server
+performs ticket verification / redemption in the background. The Android device
+only shows screens. After `REDEEM_REQUEST`, the server sends `REDEEM_RESULT`:
+
+- **FAILED** → client shows **RedeemFailed** (uses `data.errorMessage` when
+  present), then returns to the home / amount screen after ~5 seconds.
+- **SUCCESS** → client shows **RedeemSuccess**; server may continue with
+  `PRINT_TICKET` / `THANK_YOU` / `AMOUNT_SELECT` (client falls back after 20s
+  if the server is silent).
+
+Example — ticket invalid / redemption failed on the server:
+
+```json
+{
+    "messageType": "REDEEM_RESULT",
+    "screen": "FAILED",
+    "data": {
+        "errorCode": "REDEEM_FAILED",
+        "errorMessage": "-103 Ticket is invalid",
+        "ticketId": "010001000032787520",
+        "bankRedeemAmount": 0,
+        "cashRedeemAmount": 0,
+        "paymentDetails": {}
+    },
+    "transactionId": "T123456",
+    "timestamp": 1765208650000
+}
+```
+
+Example — success:
+
+```json
+{
+    "messageType": "REDEEM_RESULT",
+    "screen": "SUCCESS",
+    "data": {
+        "errorCode": null,
+        "errorMessage": null,
+        "ticketId": "TKT-12345",
+        "bankRedeemAmount": 150,
+        "cashRedeemAmount": 50,
+        "paymentDetails": {
+            "Result": "A",
+            "BankResultCode": "00",
+            "Message": "REDEEM_APPROVED",
+            "RequesterTransRefNum": "REDEEM_REDEEM_1765208631832"
+        }
+    },
+    "transactionId": "REDEEM_1765208631832",
+    "timestamp": 1765208650000
+}
+```
+
+**Client-originated** `REDEEM_RESULT` (still used when the device refuses or
+times out locally) failure codes:
+- `DEVICE_BUSY` — a payment/redemption was already in progress when REDEEM_REQUEST arrived
+- `BREAKDOWN_TIMEOUT` — neither REDEEM_BREAKDOWN nor server REDEEM_RESULT arrived (30s)
+- `INVALID_BREAKDOWN` — breakdown amounts inconsistent/negative
+- `NOTHING_TO_REDEEM` — bank portion is 0; the existing ticket is already valid for cash at the cashier desk
+- `REDEEM_FAILED` / provider result codes — terminal payout declined or failed
+- `REDEEM_NOT_SUPPORTED` — provider cannot perform an unreferenced payout
+- `EXCEPTION` — unexpected client error
+
+**Delivery guarantee (client → server):** when the client produces `REDEEM_RESULT`
+and the socket is down, it persists and retries on reconnect (same mechanism as
+`REVERSAL_RESULT`).
+
+### 15.6 Post-Redemption Flow (server-controlled)
+
+After receiving `REDEEM_RESULT` / `SUCCESS`, the server drives:
+
+- **If `cashRedeemAmount > 0`:** `PRINT_TICKET` (with `data.cashRedeemAmount`)
+  → `COLLECT_TICKET` → `THANK_YOU` → `AMOUNT_SELECT`
+- **If `cashRedeemAmount == 0`:** `THANK_YOU` → `AMOUNT_SELECT`
+
+The client shows the **RedeemSuccess** screen locally right after the payout
+("£150 sent to your bank card" / "collect your £50 cash ticket at the cashier
+desk") until the server's `PRINT_TICKET` arrives. If the server never continues
+the flow, the client falls back to the main screen after **20 seconds**.
+
+After server `REDEEM_RESULT` / `FAILED`, the client shows RedeemFailed and
+returns to the home screen itself (server does not need to send AMOUNT_SELECT,
+though it may). After local/client `REDEEM_RESULT` / `FAILED` (e.g. payout
+declined), the same UI recovery applies.
+
+### 15.7 Redemption Screens (device display)
+
+Redemption business logic can run on the server; the device shows:
+
+- **RedeemInitiated** — after `REDEEM_REQUEST` ("Verifying your ticket...")
+- **RedeemConfirmation** — after `REDEEM_BREAKDOWN` when customer must Continue/Cancel (optional path)
+- **RedeemProcessing** — while a local payout runs (optional path)
+- **RedeemSuccess** — after server or local `REDEEM_RESULT` / `SUCCESS`
+- **RedeemCancelled** — customer cancelled / confirmation timed out
+- **RedeemFailed** — after server or local `REDEEM_RESULT` / `FAILED`, then auto-return home
+
+### 15.8 Redemption Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant S as Server
+    participant A as Android App
+    participant T as Terminal SDK
+
+    S->>A: REDEEM_REQUEST(ticketId)
+    A->>A: Show RedeemInitiated ("Verifying ticket")
+    Note over S: Scanner / back office returns ticket value + split
+    S->>A: REDEEM_BREAKDOWN(total=200, bank=150, cash=50, currency)
+    A->>A: Show RedeemConfirmation (Continue / Cancel)
+    alt Customer cancels (or 60s timeout)
+        A->>S: USER_ACTION(REDEEM_RESPONSE, CANCEL/TIMEOUT)
+        A->>A: Show RedeemCancelled → main screen (ticket stays valid)
+    else Customer continues
+        A->>S: USER_ACTION(REDEEM_RESPONSE, CONTINUE)
+        A->>T: Payout bankRedeemAmount to customer's card
+        alt Payout successful
+            A->>S: REDEEM_RESULT(SUCCESS, bank=150, cash=50)
+            A->>A: Show RedeemSuccess
+            S->>A: SCREEN_CHANGE(PRINT_TICKET cash=50)
+            S->>A: SCREEN_CHANGE(COLLECT_TICKET)
+            S->>A: SCREEN_CHANGE(THANK_YOU)
+            S->>A: SCREEN_CHANGE(AMOUNT_SELECT)
+        else Payout failed
+            A->>S: REDEEM_RESULT(FAILED, errorCode=REDEEM_FAILED)
+            A->>A: Show RedeemFailed → main screen (ticket stays valid)
+        end
+    end
+```
+
+## 16. App Restart Message
 
 The server can instruct the client to restart the application by sending a RESTART_APP message. This is useful for applying configuration changes, recovering from errors, or performing maintenance operations. When the app is closed, kiosk mode will automatically reopen it.
 
@@ -1300,6 +1592,8 @@ The server can instruct the client to restart the application by sending a RESTA
 - **LIMIT_CHECK_RESULT**: Server responds to card check with approval/rejection
 - **REFUND_REQUEST** / **REVERSAL_REQUEST**: Server requests client to refund/reverse a previously successful sale transaction
 - **REVERSAL_RESULT**: Client sends refund/reversal result back to server
+- **REDEEM_REQUEST** / **REDEEM_BREAKDOWN**: Server initiates redemption (request has no amount yet); breakdown carries ticket value, currency, and bank/cash split after scan/back-office lookup
+- **REDEEM_RESULT**: Client reports whether the ticket was redeemed (failure = ticket remains valid)
 
 ### New Screens
 - **TIMEOUT**: Timeout screen (shown before direct payment when yaspaEnabled=false)
@@ -1349,6 +1643,16 @@ The server can instruct the client to restart the application by sending a RESTA
 - Cancel and reset messages for transaction management
 - Refund processing for printer errors
 - Refund/reversal support for server-initiated transaction reversals
+
+### Ticket Redemption Support (Redeem to Bank Account)
+- Server initiates via REDEEM_REQUEST (ticket id only — amount/currency unknown until scan/back office), then sends value + bank/cash split via REDEEM_BREAKDOWN
+- AML rule: bank portion = card spend + winnings; cash spend is printed as a cash ticket for the cashier desk
+- Customer must confirm (CONTINUE) or decline (CANCEL) the split on-device; no answer for 60s auto-cancels
+- On CONTINUE the client pays the bank portion out via the payment provider and reports REDEEM_RESULT
+- Any failure (payout declined, timeout, invalid breakdown, device busy) is reported as REDEEM_RESULT FAILED so the backend keeps the ticket valid
+- REDEEM_RESULT uses the persisted critical-message retry mechanism, surviving socket drops and app restarts
+- After success, server drives the cash-ticket print flow (PRINT_TICKET → COLLECT_TICKET → THANK_YOU → AMOUNT_SELECT)
+- See section 15 for full details
 
 ### Refund/Reversal Support
 - Client automatically tracks last successful sale transaction

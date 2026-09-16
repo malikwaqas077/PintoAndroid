@@ -5,6 +5,7 @@
     <!-- Kiosk fullscreen overlay touch interceptors -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <application
+        android:name=".PintoApplication"
         android:networkSecurityConfig="@xml/network_security_config"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -24,6 +25,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- CCV payment engine delivers transaction results back to the host
+                 app through this intent (OPI-NL on-device terminals). Mirrors
+                 PayBridge's CcvAdapter integration. -->
+            <intent-filter>
+                <action android:name="eu.ccv.service.ECR" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

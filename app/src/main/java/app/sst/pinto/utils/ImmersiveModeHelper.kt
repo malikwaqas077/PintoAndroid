@@ -5,9 +5,7 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.os.Build
-import android.util.Log
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsetsController
@@ -171,7 +169,7 @@ object ImmersiveModeHelper {
             applyGestureExclusion(decor)
             (decor as? ViewGroup)?.let { bringDecorEdgeBlockersToFront(it) }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to hide system bars: ${e.message}", e)
+            AppLog.e(TAG, "Failed to hide system bars: ${e.message}", e)
         }
     }
 
@@ -202,24 +200,20 @@ object ImmersiveModeHelper {
         removeTouchInterceptor(activity, session.topTouchInterceptor)
         removeTouchInterceptor(activity, session.bottomTouchInterceptor)
 
-        session.topTouchInterceptor = createOverlayInterceptor(activity) { hideSystemBars(activity) }
-        session.bottomTouchInterceptor = createOverlayInterceptor(activity) { hideSystemBars(activity) }
+        session.topTouchInterceptor = createOverlayInterceptor(activity)
+        session.bottomTouchInterceptor = createOverlayInterceptor(activity)
 
         addTouchInterceptor(activity, session.topTouchInterceptor, Gravity.TOP, TOP_INTERCEPTOR_HEIGHT_PX)
         addTouchInterceptor(activity, session.bottomTouchInterceptor, Gravity.BOTTOM, BOTTOM_INTERCEPTOR_HEIGHT_PX)
     }
 
-    private fun createOverlayInterceptor(
-        activity: Activity,
-        onTouch: () -> Unit,
-    ): View = object : View(activity) {
-        override fun onTouchEvent(event: MotionEvent): Boolean {
-            if (event.action == MotionEvent.ACTION_UP) {
-                onTouch()
-            }
-            return true
-        }
-    }
+    // Transparent, non-interactive placeholder. The overlay window itself is
+    // marked FLAG_NOT_TOUCHABLE (see addTouchInterceptor) so it never consumes
+    // touches — neither from our own keypad buttons that sit in the bottom band
+    // nor from a foreground app such as NNSmart drawing underneath this overlay.
+    // Re-hiding the system bars is handled by the decor edge blockers, the
+    // periodic hide loop and the system-UI visibility listener instead.
+    private fun createOverlayInterceptor(activity: Activity): View = View(activity)
 
     private fun addTouchInterceptor(
         activity: Activity,
@@ -233,8 +227,8 @@ object ImmersiveModeHelper {
             heightPx,
             overlayWindowType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
             this.gravity = gravity
@@ -244,7 +238,7 @@ object ImmersiveModeHelper {
             val wm = activity.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             wm.addView(view, params)
         } catch (e: Exception) {
-            Log.w(TAG, "Overlay touch interceptor failed ($gravity), using decor fallback: ${e.message}")
+            AppLog.w(TAG, "Overlay touch interceptor failed ($gravity), using decor fallback: ${e.message}")
         }
     }
 
@@ -278,10 +272,14 @@ object ImmersiveModeHelper {
                 TOP_INTERCEPTOR_HEIGHT_PX,
                 Gravity.TOP
             )
-            isClickable = true
+            // Detect edge touches to re-hide the bars, but do NOT consume the
+            // event (return false + non-clickable) so taps fall through to the
+            // UI underneath — otherwise buttons sitting in the edge band only
+            // respond on the sliver poking past the blocker.
+            isClickable = false
             setOnTouchListener { _, _ ->
                 hideSystemBars(activity)
-                true
+                false
             }
         }
         val bottom = FrameLayout(activity).apply {
@@ -291,10 +289,11 @@ object ImmersiveModeHelper {
                 BOTTOM_INTERCEPTOR_HEIGHT_PX,
                 Gravity.BOTTOM
             )
-            isClickable = true
+            // See note on the top blocker: detect to re-hide, never consume.
+            isClickable = false
             setOnTouchListener { _, _ ->
                 hideSystemBars(activity)
-                true
+                false
             }
         }
         decor.addView(top)

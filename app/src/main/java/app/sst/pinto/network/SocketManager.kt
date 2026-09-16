@@ -1,6 +1,7 @@
 package app.sst.pinto.network
 
-import android.util.Log
+import app.sst.pinto.utils.AppLog
+import app.sst.pinto.utils.WireLog
 import app.sst.pinto.utils.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +28,7 @@ class SocketManager private constructor() {
         if (fileLogger != null) {
             fileLogger?.d(TAG, message)
         } else {
-            Log.d(TAG, message)
+            AppLog.d(TAG, message)
         }
     }
 
@@ -35,13 +36,12 @@ class SocketManager private constructor() {
         if (fileLogger != null) {
             fileLogger?.e(TAG, message, t)
         } else {
-            Log.e(TAG, message, t)
+            AppLog.e(TAG, message, t)
         }
     }
 
     fun configureLogging(logger: FileLogger) {
         fileLogger = logger
-        logDebug("SocketManager file logging configured")
     }
 
     private val client = OkHttpClient.Builder()
@@ -58,6 +58,13 @@ class SocketManager private constructor() {
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState
 
+    /** Last failure/close reason for UI diagnosis (cleared on successful open). */
+    @Volatile
+    var lastFailureReason: String? = null
+        private set
+
+    fun getServerUrl(): String = serverUrl
+
     // Message receiver - use SharedFlow with buffer to queue all messages
     // StateFlow only holds latest value, which can cause messages to be lost when they arrive quickly
     private val _messageReceived = MutableSharedFlow<String>(
@@ -70,12 +77,10 @@ class SocketManager private constructor() {
         serverUrl = url
         // Don't connect if already connected or connecting
         if (_connectionState.value == ConnectionState.CONNECTED) {
-            logDebug("Already connected")
             return
         }
         
         if (_connectionState.value == ConnectionState.CONNECTING) {
-            logDebug("Connection already in progress, skipping duplicate connect request")
             return
         }
 
@@ -100,16 +105,12 @@ class SocketManager private constructor() {
      * Useful after screensaver or timeout periods.
      */
     fun ensureConnected() {
-        logDebug("Ensuring socket connection is active")
         when (_connectionState.value) {
             ConnectionState.CONNECTED -> {
-                logDebug("Already connected to $serverUrl")
                 // Send a small ping message to verify connection is still alive
                 val pingSuccess = webSocket?.send("{\"ping\":true}")
-                logDebug("Sent ping message, result: $pingSuccess")
             }
             ConnectionState.CONNECTING -> {
-                logDebug("Connection already in progress, waiting for it to complete")
             }
             ConnectionState.DISCONNECTED -> {
                 logDebug("Not connected, attempting reconnection to $serverUrl")
@@ -126,9 +127,10 @@ class SocketManager private constructor() {
     }
     fun sendMessage(message: String): Boolean {
         return if (_connectionState.value == ConnectionState.CONNECTED) {
+            WireLog.controllerOut(message)
             webSocket?.send(message) ?: false
         } else {
-            logError("Cannot send message, not connected")
+            logError("Cannot send message, not connected: $message")
             false
         }
     }
@@ -136,11 +138,12 @@ class SocketManager private constructor() {
     private val socketListener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             logDebug("WebSocket connection opened")
+            lastFailureReason = null
             _connectionState.value = ConnectionState.CONNECTED
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
-            logDebug("Message received: $text")
+            WireLog.controllerIn(text)
             // Emit message in a coroutine scope to ensure thread safety
             // tryEmit is non-blocking and thread-safe, but using emit in a coroutine is safer
             messageScope.launch {
@@ -149,12 +152,17 @@ class SocketManager private constructor() {
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            logDebug("WebSocket connection closed: $reason")
+            val detail = if (reason.isNotBlank()) "closed ($code: $reason)" else "closed (code $code)"
+            logDebug("WebSocket connection closed: $detail")
+            lastFailureReason = detail
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            logError("WebSocket failure: ${t.message}", t)
+            val http = response?.let { "HTTP ${it.code}" }
+            val detail = listOfNotNull(t.message, http).joinToString(" — ").ifBlank { t.javaClass.simpleName }
+            logError("WebSocket failure: $detail", t)
+            lastFailureReason = detail
             _connectionState.value = ConnectionState.DISCONNECTED
 
             // Implement reconnection logic here

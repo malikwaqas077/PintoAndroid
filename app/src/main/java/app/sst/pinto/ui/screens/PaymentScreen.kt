@@ -2,6 +2,7 @@ package app.sst.pinto.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -532,6 +533,510 @@ fun ReversalSuccessScreen(message: String) {
 }
 
 @Composable
+fun RedeemInitiatedScreen(ticketId: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "TICKET REDEMPTION")
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        AnimatedPngImage(
+            imageResId = R.raw.pending,
+            contentDescription = "Verifying Ticket",
+            modifier = Modifier.size(200.dp),
+            enablePulseAnimation = true
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "pulse"
+        )
+
+        Text(
+            text = "Verifying your ticket...",
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(alpha)
+        )
+
+        ticketId?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Ticket: $it",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun RedeemConfirmationScreen(
+    ticketId: String?,
+    bankAmount: Int,
+    cashAmount: Int,
+    totalAmount: Int,
+    currency: String,
+    onResponseSelected: (Boolean) -> Unit
+) {
+    // Disable both buttons after the first tap to prevent double-submission.
+    var isButtonsEnabled by remember { mutableStateOf(true) }
+
+    val bankGreen = Color(0xFF059669)
+    val cashAmber = Color(0xFFE67E22)
+    val cancelRed = Color(0xFFE74C3C)
+    val surface = Color(0xFFF8FAFC)
+    val ink = Color(0xFF0F172A)
+    val muted = Color(0xFF64748B)
+
+    fun handleResponse(continueRedeem: Boolean) {
+        if (isButtonsEnabled) {
+            isButtonsEnabled = false
+            onResponseSelected(continueRedeem)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Redeem your ticket",
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
+            color = ink,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        ticketId?.let {
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFE2E8F0))
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = it,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = muted,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp)) {
+                RedeemAmountRow(
+                    label = "To your bank card",
+                    amount = "$currency$bankAmount",
+                    accent = bankGreen,
+                    muted = muted
+                )
+
+                // Only mention the cashier desk when there actually is a cash
+                // portion - a £0 cash row would just confuse the customer.
+                if (cashAmount > 0) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    RedeemAmountRow(
+                        label = "Cash at cashier desk",
+                        amount = "$currency$cashAmount",
+                        accent = cashAmber,
+                        muted = muted
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = Color(0xFFE2E8F0), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Total",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = ink
+                        )
+                        Text(
+                            text = "$currency$totalAmount",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ink
+                        )
+                    }
+                }
+            }
+        }
+
+        if (cashAmount > 0) {
+            Spacer(modifier = Modifier.height(14.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFEFF6FF))
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = "For security reasons, only the amount paid by card plus any winnings " +
+                        "can be sent to your bank. The rest is printed as a cash ticket to redeem " +
+                        "at the cashier desk.",
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    color = Color(0xFF475569),
+                    textAlign = TextAlign.Start
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        // Stacked full-width actions so labels stay on one line on narrow terminals.
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Button(
+                onClick = { handleResponse(true) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = bankGreen,
+                    disabledContainerColor = bankGreen.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(14.dp),
+                enabled = isButtonsEnabled
+            ) {
+                if (!isButtonsEnabled) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "CONTINUE",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = { handleResponse(false) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = cancelRed,
+                    disabledContentColor = cancelRed.copy(alpha = 0.5f)
+                ),
+                border = BorderStroke(1.5.dp, cancelRed.copy(alpha = if (isButtonsEnabled) 1f else 0.5f)),
+                shape = RoundedCornerShape(14.dp),
+                enabled = isButtonsEnabled
+            ) {
+                Text(
+                    text = "CANCEL",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RedeemAmountRow(
+    label: String,
+    amount: String,
+    accent: Color,
+    muted: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f, fill = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(accent)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = label,
+                fontSize = 15.sp,
+                color = muted,
+                maxLines = 2
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = amount,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = accent,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+fun RedeemProcessingScreen(message: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "REDEEMING TICKET")
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        AnimatedPngImage(
+            imageResId = R.raw.pending,
+            contentDescription = "Redeeming Ticket",
+            modifier = Modifier.size(200.dp),
+            enablePulseAnimation = true
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "pulse"
+        )
+
+        Text(
+            text = message,
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(alpha)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Please do not remove your card or leave the terminal",
+            fontSize = 14.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun RedeemSuccessScreen(
+    bankAmount: Int,
+    cashAmount: Int,
+    currency: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "REDEMPTION SUCCESSFUL")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        AnimatedPngImage(
+            imageResId = R.raw.accepted,
+            contentDescription = "Redemption Successful",
+            modifier = Modifier.size(180.dp),
+            enablePulseAnimation = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (bankAmount > 0) {
+            Text(
+                text = "$currency$bankAmount has been sent to your bank card",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        if (cashAmount > 0) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFF3E0)
+                )
+            ) {
+                Text(
+                    text = "A cash ticket for $currency$cashAmount is being printed. " +
+                        "Please take it to the cashier desk to collect your cash.",
+                    fontSize = 16.sp,
+                    color = Color(0xFF6D4C41),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RedeemCancelledScreen(message: String, title: String = "REDEMPTION CANCELLED") {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = title)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Icon(
+            painter = painterResource(id = R.drawable.ic_warning),
+            contentDescription = "Redemption Cancelled",
+            modifier = Modifier.size(80.dp),
+            tint = Color(0xFFF57C00)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = message,
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "pulse"
+        )
+
+        Text(
+            text = "Returning to main screen...",
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(alpha)
+        )
+    }
+}
+
+@Composable
+fun RedeemFailedScreen(errorMessage: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedHeader(text = "REDEMPTION FAILED")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        AnimatedPngImage(
+            imageResId = R.raw.failed,
+            contentDescription = "Redemption Failed",
+            modifier = Modifier.size(180.dp),
+            enablePulseAnimation = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer
+            )
+        ) {
+            Text(
+                text = errorMessage,
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Returning to main screen...",
+            fontSize = 16.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
 fun LimitErrorScreen(errorMessage: String) {
     Column(
         modifier = Modifier
@@ -656,7 +1161,8 @@ fun PaymentScreen(
     onAmountSelected: (Int) -> Unit,
     onPaymentMethodSelected: (String) -> Unit,
     onReceiptResponse: (Boolean) -> Unit,
-    onCancelPayment: () -> Unit = {}
+    onCancelPayment: () -> Unit = {},
+    onRedeemResponse: (Boolean) -> Unit = {}
 ) {
     // Track previous state for animations
     var previousState by remember { mutableStateOf<PaymentScreenState?>(null) }
@@ -702,7 +1208,11 @@ fun PaymentScreen(
             )
             is PaymentScreenState.Timeout -> TimeoutScreen()
             is PaymentScreenState.Loading -> LoadingScreen()
-            is PaymentScreenState.ConnectionError -> ConnectionErrorScreen()
+            is PaymentScreenState.ConnectionError -> ConnectionErrorScreen(
+                title = targetState.title,
+                detail = targetState.detail,
+                secondaryDetail = targetState.secondaryDetail
+            )
             is PaymentScreenState.AmountSelect -> AmountSelectionScreen(
                 amounts = targetState.amounts,
                 currency = targetState.currency,
@@ -749,6 +1259,32 @@ fun PaymentScreen(
                 amount = targetState.amount,
                 currency = targetState.currency,
                 onCancel = onCancelPayment
+            )
+            is PaymentScreenState.RedeemInitiated -> RedeemInitiatedScreen(
+                ticketId = targetState.ticketId
+            )
+            is PaymentScreenState.RedeemConfirmation -> RedeemConfirmationScreen(
+                ticketId = targetState.ticketId,
+                bankAmount = targetState.bankAmount,
+                cashAmount = targetState.cashAmount,
+                totalAmount = targetState.totalAmount,
+                currency = targetState.currency,
+                onResponseSelected = onRedeemResponse
+            )
+            is PaymentScreenState.RedeemProcessing -> RedeemProcessingScreen(
+                message = targetState.message
+            )
+            is PaymentScreenState.RedeemSuccess -> RedeemSuccessScreen(
+                bankAmount = targetState.bankAmount,
+                cashAmount = targetState.cashAmount,
+                currency = targetState.currency
+            )
+            is PaymentScreenState.RedeemCancelled -> RedeemCancelledScreen(
+                message = targetState.message,
+                title = targetState.title
+            )
+            is PaymentScreenState.RedeemFailed -> RedeemFailedScreen(
+                errorMessage = targetState.errorMessage
             )
 
 
@@ -801,7 +1337,11 @@ fun LoadingScreen() {
 
 
 @Composable
-fun ConnectionErrorScreen() {
+fun ConnectionErrorScreen(
+    title: String = "Connection Error",
+    detail: String = "Unable to connect. Please check your connection.",
+    secondaryDetail: String? = null
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -809,7 +1349,6 @@ fun ConnectionErrorScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Error icon
         Icon(
             painter = painterResource(id = R.drawable.ic_warning),
             contentDescription = "Connection Error",
@@ -820,7 +1359,7 @@ fun ConnectionErrorScreen() {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Connection Error",
+            text = title,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -829,10 +1368,20 @@ fun ConnectionErrorScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Unable to connect to the payment server. Please check your connection.",
+            text = detail,
             textAlign = TextAlign.Center,
             fontSize = 18.sp
         )
+
+        if (!secondaryDetail.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = secondaryDetail,
+                textAlign = TextAlign.Center,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
     }
 }
 @Composable
