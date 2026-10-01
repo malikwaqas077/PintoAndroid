@@ -25,6 +25,7 @@ import integrate_clientsdk.response.IStatusUpdateHandler
 import integrate_clientsdk.response.Response
 import integrate_clientsdk.response.StatusUpdate
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -37,7 +38,53 @@ data class PlanetPaymentResult(
     val message: String? = null,
     val requesterTransRefNum: String? = null,
     val rawOptions: Map<String, String> = emptyMap()
-)
+) {
+    /** DCC details when the cardholder opted in to pay in their card currency, else null. */
+    val dcc: DccDetails? get() = DccDetails.fromOptions(rawOptions)
+
+    /** Receipt text Integra builds for the merchant (PrintData1) and cardholder (PrintData2). */
+    val merchantReceipt: String? get() = rawOptions["PrintData1"]?.takeIf { it.isNotBlank() }
+    val cardholderReceipt: String? get() = rawOptions["PrintData2"]?.takeIf { it.isNotBlank() }
+}
+
+/**
+ * Dynamic Currency Conversion fields from an Integra sale response.
+ * Planet requires these on the cardholder receipt, and a receipt is mandatory
+ * whenever DCC was used (offering it as an option is not enough).
+ */
+data class DccDetails(
+    val localAmount: String?,
+    val localCurrency: String?,
+    val dccAmount: String?,
+    val dccCurrency: String?,
+    val exchangeRate: String?,
+    val markupPercent: String?,
+    val sponsor: String?
+) {
+    companion object {
+        /** Response keys forwarded to the server as-is when DCC was used. */
+        val RESPONSE_KEYS = listOf(
+            "DCCFlag", "DCCReasonInd", "Currency", "CurrencyUsed", "AmountUsed",
+            "LocalAmount", "LocalCurrency", "BinAmount", "BinCurrency", "BinRate",
+            "DCCMarkup", "DCCSponsor"
+        )
+
+        fun fromOptions(options: Map<String, String>): DccDetails? {
+            if (!options["DCCFlag"].equals("Y", ignoreCase = true)) return null
+            fun opt(key: String) = options[key]?.takeIf { it.isNotBlank() }
+            return DccDetails(
+                localAmount = opt("LocalAmount") ?: opt("Amount"),
+                // LocalCurrency comes back empty on Integra; Currency holds the sale currency.
+                localCurrency = opt("LocalCurrency") ?: opt("Currency"),
+                dccAmount = opt("BinAmount") ?: opt("AmountUsed"),
+                dccCurrency = opt("BinCurrency") ?: opt("CurrencyUsed"),
+                exchangeRate = opt("BinRate"),
+                markupPercent = opt("DCCMarkup"),
+                sponsor = opt("DCCSponsor")
+            )
+        }
+    }
+}
 
 data class CardCheckResult(
     val success: Boolean,
@@ -92,6 +139,8 @@ object PlanetPaymentManager {
     // TODO: make port configurable (e.g. via Config screen or server config)
     private const val DEFAULT_TERMINAL_PORT = "1234"
     private const val DEFAULT_TIMEOUT_SECONDS = "30"
+    private const val TERMINAL_BUSY_RETRY_DELAY_MS = 2_000L
+    private const val TERMINAL_BUSY_RETRY_WINDOW_MS = 30_000L
     
     // Mutex to ensure only one transaction runs at a time
     // (Planet SDK may not handle concurrent transactions well)
@@ -291,6 +340,33 @@ object PlanetPaymentManager {
         terminalPort: String = DEFAULT_TERMINAL_PORT,
         timeoutSeconds: String = DEFAULT_TIMEOUT_SECONDS
     ): PlanetPaymentResult = transactionMutex.withLock {
+        // Integra can still be finishing the preceding CardCheckEmv when the Sale
+        // arrives and rejects it with ResultReason=TB ("Terminal busy!") before any
+        // card is read. Nothing was charged, so wait and resend.
+        val start = System.currentTimeMillis()
+        var attempt = 1
+        var result = performSaleAttempt(amountFormatted, requesterRef, terminalIp, terminalPort, timeoutSeconds)
+        while (result.rawOptions["ResultReason"].equals("TB", ignoreCase = true) &&
+            System.currentTimeMillis() - start < TERMINAL_BUSY_RETRY_WINDOW_MS
+        ) {
+            AppLog.w(TAG, "Planet: terminal busy (attempt $attempt, ${System.currentTimeMillis() - start}ms), retrying sale in ${TERMINAL_BUSY_RETRY_DELAY_MS}ms")
+            delay(TERMINAL_BUSY_RETRY_DELAY_MS)
+            attempt++
+            result = performSaleAttempt(amountFormatted, requesterRef, terminalIp, terminalPort, timeoutSeconds)
+        }
+        if (attempt > 1) {
+            AppLog.d(TAG, "Planet: sale finished after $attempt attempts, ${System.currentTimeMillis() - start}ms, reason=${result.rawOptions["ResultReason"]}")
+        }
+        result
+    }
+
+    private suspend fun performSaleAttempt(
+        amountFormatted: String,
+        requesterRef: String,
+        terminalIp: String,
+        terminalPort: String,
+        timeoutSeconds: String
+    ): PlanetPaymentResult =
         withContext(Dispatchers.IO) {
             AppLog.d(TAG, "Starting Planet sale: amount=$amountFormatted, ref=$requesterRef, ip=$terminalIp:$terminalPort")
 
@@ -516,6 +592,9 @@ object PlanetPaymentManager {
 
                
                 AppLog.d(TAG, "Planet: transaction completed with success=$success")
+                DccDetails.fromOptions(state.rawOptions)?.let { dcc ->
+                    AppLog.d(TAG, "Planet: DCC used - ${dcc.localAmount} ${dcc.localCurrency} -> ${dcc.dccAmount} ${dcc.dccCurrency} rate=${dcc.exchangeRate} markup=${dcc.markupPercent}%")
+                }
                 PlanetPaymentResult(
                     success = success,
                     resultCode = state.resultCode,
@@ -535,7 +614,6 @@ object PlanetPaymentManager {
                 )
             }
         }
-    }
     
     /**
      * Clean up Planet SDK resources properly.

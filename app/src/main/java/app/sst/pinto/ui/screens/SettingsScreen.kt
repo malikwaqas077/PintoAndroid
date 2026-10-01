@@ -183,12 +183,10 @@ fun SettingsScreen(
                                 value = if (info.requireCardReceipt) "Enabled" else "Disabled"
                             )
 
-                            // Newland/NNSmart and Switchio/Monet+: choose when the daily limit
-                            // is validated relative to capturing payment.
-                            if (info.paymentProvider.uppercase() in listOf(
-                                    "NNSMART", "NEWLAND", "SWITCHIO", "MONET", "MONETPLUS"
-                                )
-                            ) {
+                            // Newland/NNSmart: choose when the daily limit is validated
+                            // relative to capturing payment. Switchio/Monet+ is always
+                            // post-processing, so it has no toggle.
+                            if (info.paymentProvider.uppercase() in listOf("NNSMART", "NEWLAND")) {
                                 SettingToggleRow(
                                     label = if (info.nnsmartPostProcessingLimit) {
                                         "Post Processing"
@@ -208,6 +206,33 @@ fun SettingsScreen(
                                             logger.i(
                                                 "SettingsScreen",
                                                 "Newland limit timing set to ${if (enabled) "POST" else "PRE"}-processing"
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+
+                            // Planet/Integra: same choice, stored separately (defaults to pre).
+                            if (info.paymentProvider.uppercase() in listOf("INTEGRA", "PLANET")) {
+                                SettingToggleRow(
+                                    label = if (info.planetPostProcessingLimit) {
+                                        "Post Processing"
+                                    } else {
+                                        "Pre Processing"
+                                    },
+                                    description = if (info.planetPostProcessingLimit) {
+                                        "Post-processing: take payment first, check limit after, reverse if exceeded"
+                                    } else {
+                                        "Pre-processing: check limit before payment (card check first)"
+                                    },
+                                    checked = info.planetPostProcessingLimit,
+                                    onCheckedChange = { enabled ->
+                                        coroutineScope.launch {
+                                            database.deviceInfoDao()
+                                                .updatePlanetPostProcessingLimit(enabled)
+                                            logger.i(
+                                                "SettingsScreen",
+                                                "Planet limit timing set to ${if (enabled) "POST" else "PRE"}-processing"
                                             )
                                         }
                                     }

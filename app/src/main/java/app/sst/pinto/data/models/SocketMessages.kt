@@ -49,6 +49,8 @@ data class MessageData(
     // When false: pre-processing (read card / verify before capture).
     // When true: post-processing (capture first, reverse if limit exceeded).
     @Json(name = "nnsmartPostProcessingLimit") val nnsmartPostProcessingLimit: Boolean? = null,
+    // Planet/Integra equivalent of the above (default pre-processing).
+    @Json(name = "planetPostProcessingLimit") val planetPostProcessingLimit: Boolean? = null,
     
     // Card check result fields.
     // For Integra this carries the card token from CardCheckEmv.

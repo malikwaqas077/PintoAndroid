@@ -2,6 +2,8 @@ package app.sst.pinto.ui.components
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import app.sst.pinto.utils.AppLog
 import android.view.LayoutInflater
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -23,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -35,6 +38,7 @@ import app.sst.pinto.utils.VideoDownloadManager
 import java.io.File
 
 private const val TAG = "Screensaver"
+private const val PLAYER_ERROR_RETRY_DELAY_MS = 3_000L
 
 /**
  * A screensaver component that plays a video in a loop.
@@ -82,6 +86,15 @@ fun Screensaver(
 
                 setMediaItem(MediaItem.fromUri(Uri.parse(videoUriString)))
 
+                // The screensaver is silent. Skip the audio track so no AAC decoder is
+                // created: on the PAX IM30 (Android 7.1) OMX.google.aac.decoder
+                // intermittently fails to initialise, and ExoPlayer then fails the whole
+                // playback, leaving a black screen.
+                trackSelectionParameters = trackSelectionParameters
+                    .buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+                    .build()
+
                 // Configure player
                 repeatMode = Player.REPEAT_MODE_ALL
                 playWhenReady = true
@@ -105,10 +118,16 @@ fun Screensaver(
 
                     override fun onPlayerError(error: PlaybackException) {
                         AppLog.e(TAG, "Player error: ${error.message}")
-                        // Try to recover by recreating the media item
-                        setMediaItem(MediaItem.fromUri(Uri.parse(videoUriString)))
-                        prepare()
-                        play()
+                        // Try to recover by recreating the media item, after a pause so a
+                        // persistent failure doesn't spin in a tight retry loop.
+                        val failedPlayer = this@apply
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            if (player === failedPlayer) {
+                                setMediaItem(MediaItem.fromUri(Uri.parse(videoUriString)))
+                                prepare()
+                                play()
+                            }
+                        }, PLAYER_ERROR_RETRY_DELAY_MS)
                     }
                 })
 

@@ -19,6 +19,11 @@ interface DeviceInfoDao {
     @Query("UPDATE device_info SET nnsmartPostProcessingLimit = :enabled WHERE id = 1")
     suspend fun updateNnsmartPostProcessingLimit(enabled: Boolean)
 
+    // Planet/Integra limit-processing mode. true = post-processing (sale-first),
+    // false = pre-processing (card check first).
+    @Query("UPDATE device_info SET planetPostProcessingLimit = :enabled WHERE id = 1")
+    suspend fun updatePlanetPostProcessingLimit(enabled: Boolean)
+
     @Query("DELETE FROM device_info WHERE id = 1")
     suspend fun deleteDeviceInfo()
 }

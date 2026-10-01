@@ -60,6 +60,7 @@ object MockPaymentManager {
      * 
      * Special behavior:
      * - Amount 101.00 returns daily limit exceeded error
+     * - Amount 102.00 returns an approved DCC sale (GBP -> EUR) with receipt text
      * - All other amounts return successful payment response
      *
      * @param amountFormatted amount as a string in the format "10.00"
@@ -93,6 +94,63 @@ object MockPaymentManager {
             )
         }
         
+        // Special case: amount 102.00 simulates a DCC sale (cardholder paid in EUR)
+        if (amountValue == 102.00) {
+            AppLog.d(TAG, "Mock sale: DCC approved for amount 102.00")
+            val rate = "1.1650000"
+            val eurAmount = String.format("%.2f", amountValue * rate.toDouble())
+            val receipt = { copy: String ->
+                """
+                |--------------------------------
+                |         APPROVED
+                |--------------------------------
+                |SALE
+                |PAN..........: xxxxxxxxxxxx1712
+                |CARD TYPE....: MASTERCARD
+                |TRANSACTION NO...: $requesterRef
+                |SALE CURRENCY....: GBP
+                |TOTAL AMOUNT.....: GBP $amountFormatted
+                |--------------------------------
+                |FX RATE: 1 GBP = 1.1650EUR
+                |INCL. 3% OVER ECB RATE
+                |TRANS. CURRENCY..:EUR
+                |TRANS. AMOUNT....:EUR $eurAmount
+                |(X)I HAVE BEEN OFFERED A CHOICE OF PAYMENT CURRENCIES.
+                |THIS CURRENCY CONVERSION SERVICE IS OFFERED BY THE MERCHANT.
+                |--------------------------------
+                |      $copy RECEIPT
+                """.trimMargin()
+            }
+            return@withContext PlanetPaymentResult(
+                success = true,
+                resultCode = "A",
+                bankResultCode = "00",
+                message = "APPROVED",
+                requesterTransRefNum = requesterRef,
+                rawOptions = mapOf(
+                    "Result" to "A",
+                    "BankResultCode" to "00",
+                    "Message" to "Approval",
+                    "RequesterTransRefNum" to requesterRef,
+                    "Amount" to amountFormatted,
+                    "AmountUsed" to eurAmount,
+                    "Currency" to "GBP",
+                    "CurrencyUsed" to "EUR",
+                    "DCCFlag" to "Y",
+                    "DCCReasonInd" to "MI",
+                    "LocalAmount" to amountFormatted,
+                    "LocalCurrency" to "",
+                    "BinAmount" to eurAmount,
+                    "BinCurrency" to "EUR",
+                    "BinRate" to rate,
+                    "DCCMarkup" to "3",
+                    "DCCSponsor" to "MarkUp ECB",
+                    "PrintData1" to receipt("MERCHANT"),
+                    "PrintData2" to receipt("CARDHOLDER")
+                )
+            )
+        }
+
         // All other amounts succeed
         AppLog.d(TAG, "Mock sale: Payment successful")
         PlanetPaymentResult(

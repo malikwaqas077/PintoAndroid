@@ -16,6 +16,7 @@ import app.sst.pinto.network.PortalWebSocketRepository
 import app.sst.pinto.network.SocketManager
 import app.sst.pinto.utils.NetworkConnectivity
 import app.sst.pinto.payment.PlanetPaymentManager
+import app.sst.pinto.payment.DccDetails
 import app.sst.pinto.payment.MockPaymentManager
 import app.sst.pinto.payment.NNSmartPaymentManager
 import app.sst.pinto.payment.NNSmartPaymentResult
@@ -112,6 +113,10 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     // For Switchio / Monet+: sale-first (post-processing) keeps the captured
     // sale so a limit rejection can reverse it via originalTransactionId.
     private var pendingSwitchioSale: SwitchioPaymentResult? = null
+
+    // For Planet/Integra post-processing: the approved sale waiting on the
+    // backend limit check; a rejection reverses it with Sale-Reversal.
+    private var pendingPlanetSale: app.sst.pinto.payment.PlanetPaymentResult? = null
 
     // For Switchio Card Verify / READ CARD (pre-processing): PAR obtained before
     // capture. On approve we run read_card_payment; on reject nothing was captured.
@@ -392,6 +397,9 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
     private var disconnectRecoveryJob: Job? = null
     private var isRecoveryInProgress: Boolean = false
+
+    /** Transaction ID of the last sale paid with DCC; its receipt question is auto-answered YES. */
+    private var dccReceiptTransactionId: String? = null
 
     private fun audit(message: String) {
         fileLogger.i(TAG, message)
@@ -906,6 +914,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         pendingNnsmartCardVerification = null
         pendingCcvSale = null
         pendingSwitchioSale = null
+        pendingPlanetSale = null
         pendingSwitchioCardVerify = null
 
         // Step 1: Show PROCESSING screen automatically
@@ -984,24 +993,28 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 if (SwitchioPaymentManager.isSwitchioProvider(paymentProvider)) {
-                    // Reuse nnsmartPostProcessingLimit as the pre/post toggle for
-                    // Switchio (same semantics: post = sale-first, pre = two-step
-                    // READ CARD → limit → READ CARD PAYMENT).
-                    if (deviceInfo.nnsmartPostProcessingLimit) {
-                        AppLog.d(TAG, "Switchio: using POST-processing limit flow (sale-first)")
-                        processSwitchioPayment(
-                            transactionId = transactionId,
-                            amountFormatted = amountFormatted,
-                            currencyCode = currencyCode
-                        )
-                    } else {
-                        AppLog.d(TAG, "Switchio: using PRE-processing limit flow (read_card)")
-                        processSwitchioCardVerifyPayment(
-                            transactionId = transactionId,
-                            amountFormatted = amountFormatted,
-                            currencyCode = currencyCode
-                        )
-                    }
+                    // Switchio/Monet+ is always post-processing (sale-first, reverse
+                    // if the limit is rejected). Monet+ declines read_card for our
+                    // terminals, so the pre-processing flow is deliberately not
+                    // selectable here regardless of nnsmartPostProcessingLimit.
+                    AppLog.d(TAG, "Switchio: using POST-processing limit flow (sale-first)")
+                    processSwitchioPayment(
+                        transactionId = transactionId,
+                        amountFormatted = amountFormatted,
+                        currencyCode = currencyCode
+                    )
+                    return@launch
+                }
+
+                // Planet/Integra post-processing: sale first, limit check on the
+                // sale's card Token, Sale-Reversal if rejected.
+                if (paymentProvider != "mock" && deviceInfo.planetPostProcessingLimit) {
+                    AppLog.d(TAG, "Planet: using POST-processing limit flow (sale-first)")
+                    processPlanetPostPayment(
+                        transactionId = transactionId,
+                        amountFormatted = amountFormatted,
+                        paymentProvider = paymentProvider
+                    )
                     return@launch
                 }
 
@@ -1196,6 +1209,224 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
      * charge first, then send `par` / `cardRefId` to the backend for daily
      * limit validation. If the backend rejects, we reverse via Cancellation.
      */
+    /**
+     * Planet/Integra post-processing (sale-first) flow:
+     *   1. Sale-Terminal (DCC may be offered here as usual).
+     *   2. Send the sale's card Token to the backend in CARD_CHECK_RESULT.
+     *   3. LIMIT_CHECK_RESULT approved → report success; rejected → Sale-Reversal
+     *      (see continuePlanetPaymentAfterLimitCheck).
+     */
+    private suspend fun processPlanetPostPayment(
+        transactionId: String,
+        amountFormatted: String,
+        paymentProvider: String
+    ) {
+        try {
+            AppLog.d(TAG, "Planet: performing up-front sale amount=$amountFormatted ref=$transactionId")
+            val saleResult = PlanetPaymentManager.performSale(
+                amountFormatted = amountFormatted,
+                requesterRef = transactionId
+            )
+
+            if (!saleResult.success) {
+                AppLog.w(TAG, "Planet sale failed: code=${saleResult.resultCode} msg=${saleResult.message}")
+                reportPortalTransaction(
+                    transactionId = transactionId,
+                    status = "Failed",
+                    amountMinor = currentAmount,
+                    provider = paymentProvider,
+                    message = saleResult.message ?: "Payment failed"
+                )
+                _screenState.value = PaymentScreenState.TransactionFailed(
+                    errorMessage = saleResult.message ?: "Payment failed"
+                )
+                isProcessingPayment = false
+                isHandlingPaymentLocally = false
+                socketManager.sendMessage(buildPlanetPaymentResultJson(saleResult, transactionId))
+                viewModelScope.launch {
+                    delay(4000)
+                    requestInitialScreen()
+                }
+                return
+            }
+
+            // Money is captured: keep the sale so a rejection (or an app restart
+            // before the limit result) can reverse it.
+            pendingPlanetSale = saleResult
+            savePendingRecoveryTransaction(
+                transactionId = transactionId,
+                amount = currentAmount,
+                originalTrxUniqueId = saleResult.requesterTransRefNum ?: transactionId,
+                provider = paymentProvider
+            )
+
+            // The Sale response carries the same card Token as CardCheckEmv, so
+            // the backend's per-card limit keys match the pre-processing flow.
+            val tokenForLimitCheck = cardIdForLimitCheck(saleResult.rawOptions["Token"], "Planet")
+                ?: return rejectPaymentWithoutCardId(transactionId)
+
+            AppLog.d(TAG, "Planet: sale approved, sending CARD_CHECK_RESULT token=$tokenForLimitCheck")
+            val cardCheckJson = JSONObject().apply {
+                put("messageType", "CARD_CHECK_RESULT")
+                put("screen", "PROCESSING")
+                put("data", JSONObject().apply {
+                    put("cardToken", tokenForLimitCheck)
+                    put("selectedAmount", currentAmount)
+                })
+                put("transactionId", transactionId)
+                put("timestamp", System.currentTimeMillis())
+            }.toString()
+            socketManager.sendMessage(cardCheckJson)
+
+            // Stay on Processing until LIMIT_CHECK_RESULT arrives.
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Planet: error during sale-first payment", e)
+            _screenState.value = PaymentScreenState.TransactionFailed(
+                errorMessage = "Payment error: ${e.message}"
+            )
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+            viewModelScope.launch {
+                delay(4000)
+                requestInitialScreen()
+            }
+        }
+    }
+
+    private fun continuePlanetPaymentAfterLimitCheck(
+        approved: Boolean,
+        transactionId: String,
+        errorMessage: String,
+        saleResult: app.sst.pinto.payment.PlanetPaymentResult
+    ) {
+        val originalRef = saleResult.requesterTransRefNum ?: transactionId
+
+        if (approved) {
+            AppLog.d(TAG, "Planet: limit approved for sale-first payment tx=$transactionId")
+            rememberDccSale(saleResult, transactionId)
+            recordSuccessfulSale(
+                SuccessfulSaleTransaction(
+                    transactionId = transactionId,
+                    amount = currentAmount,
+                    requesterTransRefNum = originalRef
+                )
+            )
+            savePendingTicketPrintTransaction(
+                transactionId = transactionId,
+                amount = currentAmount,
+                originalRequesterRef = originalRef,
+                provider = "integra"
+            )
+            socketManager.sendMessage(buildPlanetPaymentResultJson(saleResult, transactionId))
+            _screenState.value = PaymentScreenState.TransactionSuccess(showReceipt = true)
+            pendingPlanetSale = null
+            clearPendingRecoveryTransaction()
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+            return
+        }
+
+        AppLog.d(TAG, "Planet: limit rejected, reversing sale tx=$transactionId")
+        _screenState.value = PaymentScreenState.LimitError(errorMessage = errorMessage)
+        allowNavigationFromLimitError = false
+        viewModelScope.launch {
+            delay(1200)
+            _screenState.value = PaymentScreenState.ReversingTransaction(
+                message = "Limit exceeded. Reversing card transaction..."
+            )
+
+            val reversalRef = "REVERSAL_$transactionId"
+            val reversalOk = try {
+                PlanetPaymentManager.performSaleReversal(
+                    amountFormatted = String.format("%.2f", currentAmount.toDouble()),
+                    requesterRef = reversalRef,
+                    originalRequesterRef = originalRef
+                ).success
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Planet: error reversing sale", e)
+                false
+            }
+
+            val reversalResultJson = buildReversalResultJson(
+                success = reversalOk,
+                transactionId = transactionId,
+                resultCode = if (reversalOk) "LIMIT_REVERSED" else "LIMIT_REVERSAL_FAILED",
+                message = if (reversalOk) "Limit exceeded - sale reversed" else "Limit exceeded - REVERSAL FAILED",
+                requesterTransRefNum = reversalRef,
+                originalRequesterTransRefNum = originalRef,
+                originalTransactionId = transactionId,
+                reversalAmount = currentAmount
+            )
+            socketManager.sendMessage(reversalResultJson)
+
+            if (reversalOk) {
+                _screenState.value = PaymentScreenState.ReversalSuccess(
+                    message = "Limit exceeded. Card transaction reversed successfully."
+                )
+                delay(2500)
+            } else {
+                // Needs operator attention: the customer was charged.
+                _screenState.value = PaymentScreenState.TransactionFailed(
+                    errorMessage = "Please contact staff - reversal failed"
+                )
+                delay(6000)
+            }
+
+            pendingPlanetSale = null
+            clearPendingRecoveryTransaction()
+            isProcessingPayment = false
+            isHandlingPaymentLocally = false
+            requestInitialScreen()
+        }
+    }
+
+    /** Remembers a DCC sale so its receipt question is answered YES (Planet rule). */
+    private fun rememberDccSale(saleResult: app.sst.pinto.payment.PlanetPaymentResult, transactionId: String) {
+        val dcc = if (saleResult.success) saleResult.dcc else null
+        dccReceiptTransactionId = if (dcc != null) transactionId else null
+        if (dcc != null) {
+            audit("DCC sale tx=$transactionId ${dcc.localAmount} ${dcc.localCurrency} -> ${dcc.dccAmount} ${dcc.dccCurrency}")
+        }
+    }
+
+    /**
+     * PAYMENT_RESULT for a Planet sale. Built with JSONObject because the Integra
+     * receipt text (PrintData1/2) is multi-line and must be escaped properly.
+     */
+    private fun buildPlanetPaymentResultJson(
+        saleResult: app.sst.pinto.payment.PlanetPaymentResult,
+        transactionId: String
+    ): String {
+        val dcc = if (saleResult.success) saleResult.dcc else null
+        val paymentDetails = JSONObject().apply {
+            put("Result", saleResult.resultCode ?: "")
+            put("BankResultCode", saleResult.bankResultCode ?: "")
+            put("Message", saleResult.message ?: "")
+            put("RequesterTransRefNum", transactionId)
+            if (saleResult.success) {
+                saleResult.merchantReceipt?.let { put("PrintData1", it) }
+                saleResult.cardholderReceipt?.let { put("PrintData2", it) }
+                if (dcc != null) {
+                    DccDetails.RESPONSE_KEYS.forEach { key ->
+                        saleResult.rawOptions[key]?.let { put(key, it) }
+                    }
+                }
+            }
+        }
+        return JSONObject().apply {
+            put("messageType", "PAYMENT_RESULT")
+            put("screen", if (saleResult.success) "SUCCESS" else "FAILED")
+            put("data", JSONObject().apply {
+                put("errorCode", saleResult.resultCode ?: JSONObject.NULL)
+                put("errorMessage", saleResult.message ?: JSONObject.NULL)
+                put("receiptRequired", dcc != null)
+                put("paymentDetails", paymentDetails)
+            })
+            put("transactionId", transactionId)
+            put("timestamp", System.currentTimeMillis())
+        }.toString()
+    }
+
     private suspend fun processNnsmartPayment(
         transactionId: String,
         amountFormatted: String,
@@ -2049,13 +2280,14 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             clearPendingRecoveryTransaction()
             return
         }
-        if (
-            !NNSmartPaymentManager.isNNSmartProvider(pending.provider) &&
-            !SwitchioPaymentManager.isSwitchioProvider(pending.provider)
-        ) {
+        // Planet sale-first payments are stored under the Planet provider name
+        // ("integra"); CCV and mock never register a pending_tx.
+        if (CcvPaymentManager.isCcvProvider(pending.provider) || pending.provider == "mock") {
             clearPendingRecoveryTransaction()
             return
         }
+        val isPlanet = !NNSmartPaymentManager.isNNSmartProvider(pending.provider) &&
+            !SwitchioPaymentManager.isSwitchioProvider(pending.provider)
 
         AppLog.w(
             TAG,
@@ -2068,7 +2300,13 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
         val requesterRef = "RECOVERY_REVERSAL_${pending.transactionId}"
         val cancelOk = try {
-            if (SwitchioPaymentManager.isSwitchioProvider(pending.provider)) {
+            if (isPlanet) {
+                PlanetPaymentManager.performSaleReversal(
+                    amountFormatted = String.format("%.2f", pending.amount.toDouble()),
+                    requesterRef = requesterRef,
+                    originalRequesterRef = pending.originalTrxUniqueId
+                ).success
+            } else if (SwitchioPaymentManager.isSwitchioProvider(pending.provider)) {
                 SwitchioPaymentManager.performReversal(
                     originalTransactionId = pending.originalTrxUniqueId,
                     transactionId = UUID.randomUUID().toString()
@@ -2705,6 +2943,18 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             return
         }
 
+        // Planet sale-first: reverse on limit rejection.
+        val planetSale = pendingPlanetSale
+        if (planetSale != null) {
+            continuePlanetPaymentAfterLimitCheck(
+                approved = approved,
+                transactionId = transactionId,
+                errorMessage = errorMessage,
+                saleResult = planetSale
+            )
+            return
+        }
+
         // Switchio sale-first: reverse on limit rejection.
         val switchioSale = pendingSwitchioSale
         if (switchioSale != null) {
@@ -2823,6 +3073,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     )
                 }
                 
+                rememberDccSale(saleResult, transactionId)
+
                 // Step 6: Show SUCCESS or FAILED screen immediately
                 if (saleResult.success) {
                     AppLog.d(TAG, "Payment successful")
@@ -2863,26 +3115,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 }
                 
                 // Step 7: Send PAYMENT_RESULT to server (informational)
-                val paymentResultJson = """
-                    {
-                        "messageType": "PAYMENT_RESULT",
-                        "screen": "${if (saleResult.success) "SUCCESS" else "FAILED"}",
-                        "data": {
-                            "errorCode": ${if (saleResult.resultCode != null) "\"${saleResult.resultCode}\"" else "null"},
-                            "errorMessage": ${if (saleResult.message != null) "\"${saleResult.message}\"" else "null"},
-                            "paymentDetails": {
-                                "Result": "${saleResult.resultCode ?: ""}",
-                                "BankResultCode": "${saleResult.bankResultCode ?: ""}",
-                                "Message": "${saleResult.message ?: ""}",
-                                "RequesterTransRefNum": "$transactionId"
-                            }
-                        },
-                        "transactionId": "$transactionId",
-                        "timestamp": ${System.currentTimeMillis()}
-                    }
-                """.trimIndent()
-                
-                socketManager.sendMessage(paymentResultJson)
+                socketManager.sendMessage(buildPlanetPaymentResultJson(saleResult, transactionId))
                 
                 isProcessingPayment = false
                 isHandlingPaymentLocally = false // Reset flag when payment completes
@@ -2926,6 +3159,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         pendingNnsmartSale = null
         pendingCcvSale = null
         pendingSwitchioSale = null
+        pendingPlanetSale = null
         pendingSwitchioCardVerify = null
         clearPendingRecoveryTransaction()
 
@@ -3024,6 +3258,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         pendingNnsmartSale = null
         pendingCcvSale = null
         pendingSwitchioSale = null
+        pendingPlanetSale = null
         pendingSwitchioCardVerify = null
         cleanupRedeemState()
         clearPendingRecoveryTransaction()
@@ -3316,8 +3551,14 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     val database = AppDatabase.getDatabase(getApplication())
                     val deviceInfo = database.deviceInfoDao().getDeviceInfo().first()
                     val requireCardReceipt = deviceInfo?.requireCardReceipt ?: true
-                    
-                    if (requireCardReceipt) {
+                    val isDccSale = dccReceiptTransactionId != null &&
+                        dccReceiptTransactionId == currentTransactionId
+
+                    if (isDccSale) {
+                        // Planet: a receipt is mandatory for DCC; the cardholder may not decline it.
+                        AppLog.d(TAG, "DCC sale - receipt is mandatory, answering YES without asking")
+                        respondToReceiptQuestion(wantsReceipt = true)
+                    } else if (requireCardReceipt) {
                         AppLog.d(TAG, "requireCardReceipt is enabled - showing receipt question screen")
                         _screenState.value = PaymentScreenState.ReceiptQuestion(showGif = true)
                     } else {
@@ -3526,8 +3767,9 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                        data.yaspaEnabled != null ||
                        data.paymentProvider != null ||
                        data.requireCardReceipt != null ||
-                       data.nnsmartPostProcessingLimit != null
-        
+                       data.nnsmartPostProcessingLimit != null ||
+                       data.planetPostProcessingLimit != null
+
         if (hasConfig) {
             AppLog.d(TAG, "Received device configuration from server")
             viewModelScope.launch {
@@ -3552,7 +3794,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         // Defaults to post-processing (true) on first configuration.
                         nnsmartPostProcessingLimit = data.nnsmartPostProcessingLimit
                             ?: existingInfo?.nnsmartPostProcessingLimit
-                            ?: true
+                            ?: true,
+                        // Planet defaults to pre-processing (card check first).
+                        planetPostProcessingLimit = data.planetPostProcessingLimit
+                            ?: existingInfo?.planetPostProcessingLimit
+                            ?: false
                     )
                     
                     // Use insertDeviceInfo which handles both insert and update (REPLACE strategy)
@@ -3562,14 +3808,21 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         TAG,
                         "Device configuration saved: provider=${deviceInfo.paymentProvider}, " +
                             "yaspaEnabled=${deviceInfo.yaspaEnabled}, " +
-                            "postProcessingLimit=${deviceInfo.nnsmartPostProcessingLimit}"
+                            "postProcessingLimit=${deviceInfo.nnsmartPostProcessingLimit}, " +
+                            "planetPostProcessingLimit=${deviceInfo.planetPostProcessingLimit}"
                     )
 
                     // Visible confirmation that config arrived from the server
                     val toastMsg = "Config received: ${deviceInfo.paymentProvider}" +
                         " | ${deviceInfo.minTransactionLimit.toInt()}-${deviceInfo.maxTransactionLimit.toInt()}" +
                         " ${deviceInfo.currency}" +
-                        " | pre=${!deviceInfo.nnsmartPostProcessingLimit}"
+                        " | pre=${
+                            if (deviceInfo.paymentProvider.equals("integra", ignoreCase = true)) {
+                                !deviceInfo.planetPostProcessingLimit
+                            } else {
+                                !deviceInfo.nnsmartPostProcessingLimit
+                            }
+                        }"
                     Toast.makeText(getApplication(), toastMsg, Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Error saving device configuration", e)
